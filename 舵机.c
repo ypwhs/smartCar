@@ -55,7 +55,7 @@ int main(void)
     GPIO_QuickInit(HW_GPIOA, 6, kGPIO_Mode_OPP);
     /* 使用快速初始化 帮助初学者完成必要配置 */
     FTM_PWM_QuickInit(FTM0_CH3_PA06, kPWM_EdgeAligned, 50);
-    FTM_PWM_ChangeDuty(HW_FTM0, HW_FTM_CH3, 0);
+    FTM_PWM_ChangeDuty(HW_FTM0, HW_FTM_CH3, 1000);
     int f = 3;
     int ang = 0;
     int delay = 50;

@@ -1,0 +1,6 @@
+-c --cpu Cortex-M4 -D__MICROLIB -g -O3 --apcs=interwork -I..\..\..\..\Libraries\startup\CoreSupport -I..\..\..\..\Libraries\startup\DeviceSupport -I..\..\..\..\Libraries\drivers\K\inc -I..\..\..\..\Libraries\devices\inc -I..\..\..\..\Libraries\utilities\board -I..\..\..\..\Libraries\utilities\imu --c99
+-I C:\Keil_v5\ARM\RV31\INC
+-I C:\Keil_v5\ARM\PACK\ARM\CMSIS\4.1.0\CMSIS\Include
+-I C:\Keil_v5\ARM\Inc\Freescale\Kinetis
+-DMK10DN32xxx5 -DMK10D5 -DURANUS
+-o .\obj\systick.o --omf_browse .\obj\systick.crf --depend .\obj\systick.d --feedback ".\OBJ\templete.fed" "..\..\..\..\Libraries\drivers\K\src\systick.c"

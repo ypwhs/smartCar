@@ -1,0 +1,141 @@
+;#<FEEDBACK># ARM Linker, 5040049: Last Updated: Thu Sep 11 09:56:53 2014
+;VERSION 0.2
+;FILE bmp180.o
+__asm___8_bmp180_c_3c670e09____REV16 <= USED 0
+__asm___8_bmp180_c_3c670e09____REVSH <= USED 0
+bmp180_pressure2altitude <= USED 0
+;FILE common.o
+DelayUs <= USED 0
+QuickInitEncode <= USED 0
+__asm___8_common_c_6a25d72e____REV16 <= USED 0
+__asm___8_common_c_6a25d72e____REVSH <= USED 0
+;FILE dma.o
+DMA10_IRQHandler <= USED 0
+DMA11_IRQHandler <= USED 0
+DMA12_IRQHandler <= USED 0
+DMA13_IRQHandler <= USED 0
+DMA14_IRQHandler <= USED 0
+DMA15_IRQHandler <= USED 0
+DMA4_IRQHandler <= USED 0
+DMA5_IRQHandler <= USED 0
+DMA6_IRQHandler <= USED 0
+DMA7_IRQHandler <= USED 0
+DMA8_IRQHandler <= USED 0
+DMA9_IRQHandler <= USED 0
+DMA_CallbackInstall <= USED 0
+DMA_CancelTransfer <= USED 0
+DMA_DisableRequest <= USED 0
+DMA_EnableAutoDisableRequest <= USED 0
+DMA_EnableMajorLink <= USED 0
+DMA_GetDestAddress <= USED 0
+DMA_GetMajorLoopCount <= USED 0
+DMA_GetSourceAddress <= USED 0
+DMA_ITConfig <= USED 0
+DMA_SetDestAddress <= USED 0
+__asm___5_dma_c_DMA_Init____REV16 <= USED 0
+__asm___5_dma_c_DMA_Init____REVSH <= USED 0
+;FILE flashcommandsequence.o
+;FILE flasheraseallblock.o
+FlashEraseAllBlock <= USED 0
+;FILE flasherasesector.o
+FlashEraseSector <= USED 0
+;FILE flashinit.o
+;FILE flashprg.o
+BlankCheck <= USED 0
+EraseChip <= USED 0
+EraseSector <= USED 0
+ProgramPage <= USED 0
+UnInit <= USED 0
+;FILE flashprogramlongword.o
+FlashProgramLongword <= USED 0
+;FILE flashverifysection.o
+FlashVerifySection <= USED 0
+;FILE gpio.o
+GPIO_CallbackInstall <= USED 0
+GPIO_ITDMAConfig <= USED 0
+GPIO_ReadBit <= USED 0
+GPIO_ReadPort <= USED 0
+GPIO_WriteBit <= USED 0
+GPIO_WritePort <= USED 0
+PORT_PinPassiveFilterConfig <= USED 0
+__asm___6_gpio_c_bbecc7e6____REV16 <= USED 0
+__asm___6_gpio_c_bbecc7e6____REVSH <= USED 0
+;FILE hmc5883.o
+;FILE i2c.o
+I2C_CallbackInstall <= USED 0
+I2C_ITDMAConfig <= USED 0
+I2C_QuickInit <= USED 0
+I2C_ReadSingleRegister <= USED 0
+I2C_SendData <= USED 0
+I2C_WriteSingleRegister <= USED 0
+SCCB_ReadSingleRegister <= USED 0
+SCCB_WriteSingleRegister <= USED 0
+__asm___5_i2c_c_72fcbb78____REV16 <= USED 0
+__asm___5_i2c_c_72fcbb78____REVSH <= USED 0
+;FILE i2c_bus_ops.o
+;FILE imu.o
+;FILE main.o
+MagnetometerCalibration <= USED 0
+__asm___6_main_c_26bebb4a____REV16 <= USED 0
+__asm___6_main_c_26bebb4a____REVSH <= USED 0
+;FILE mpu6050.o
+;FILE nrf24l01.o
+__asm___10_nrf24l01_c_b99e02a5____REV16 <= USED 0
+__asm___10_nrf24l01_c_b99e02a5____REVSH <= USED 0
+nrf24l01_read_packet <= USED 0
+nrf24l01_set_rx_mode <= USED 0
+nrf24l01_set_tx_mode <= USED 0
+nrf24l01_write_packet <= USED 0
+;FILE pit.o
+PIT_GetCounterValue <= USED 0
+PIT_ResetCounter <= USED 0
+__asm___5_pit_c_PIT_Init____REV16 <= USED 0
+__asm___5_pit_c_PIT_Init____REVSH <= USED 0
+;FILE protocol.o
+;FILE spi.o
+SPI1_IRQHandler <= USED 0
+SPI2_IRQHandler <= USED 0
+SPI_CallbackInstall <= USED 0
+SPI_EnableRxFIFO <= USED 0
+SPI_EnableTxFIFO <= USED 0
+SPI_ITDMAConfig <= USED 0
+__asm___5_spi_c_2be00048____REV16 <= USED 0
+__asm___5_spi_c_2be00048____REVSH <= USED 0
+;FILE spi_bus_ops.o
+;FILE ssd.o
+SSD_Read <= USED 0
+SSD_Write <= USED 0
+__asm___5_ssd_c_SSDInit____REV16 <= USED 0
+__asm___5_ssd_c_SSDInit____REVSH <= USED 0
+;FILE startup_mk10d5.o
+;FILE system_mk10d5.o
+SystemCoreClockUpdate <= USED 0
+__asm___15_system_MK10D5_c_5d646a67____REV16 <= USED 0
+__asm___15_system_MK10D5_c_5d646a67____REVSH <= USED 0
+;FILE systick.o
+SYSTICK_DelayUs <= USED 0
+__asm___9_systick_c_95b100c2____REV16 <= USED 0
+__asm___9_systick_c_95b100c2____REVSH <= USED 0
+;FILE trans.o
+__asm___7_trans_c_d5702d47____REV16 <= USED 0
+__asm___7_trans_c_d5702d47____REVSH <= USED 0
+trans_is_transmission_complete <= USED 0
+;FILE uart.o
+UART_CallbackRxInstall <= USED 0
+UART_CallbackTxInstall <= USED 0
+UART_GetRxFIFOSize <= USED 0
+UART_ReadByte <= USED 0
+UART_SelectDebugInstance <= USED 0
+UART_SetRxFIFOWatermark <= USED 0
+UART_SetTxFIFOWatermark <= USED 0
+__asm___6_uart_c_0961b2bd____REV16 <= USED 0
+__asm___6_uart_c_0961b2bd____REVSH <= USED 0
+fgetc <= USED 0
+;FILE wdog.o
+WDOG_CallbackInstall <= USED 0
+WDOG_ClearResetCounter <= USED 0
+WDOG_GetCurrentCounter <= USED 0
+WDOG_GetResetCounter <= USED 0
+WDOG_ITDMAConfig <= USED 0
+__asm___6_wdog_c_a3e57686____REV16 <= USED 0
+__asm___6_wdog_c_a3e57686____REVSH <= USED 0

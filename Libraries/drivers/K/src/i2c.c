@@ -4,7 +4,7 @@
   * @author  YANDLD
   * @version V2.5
   * @date    2014.3.26
-  * @brief   www.beyondcore.net   http://upcmcu.taobao.com 
+  * @brief   www.beyondcore.net   http://upcmcu.taobao.com
   * @note    此文件为芯片IIC模块的底层功能函数
   ******************************************************************************
   */
@@ -36,7 +36,7 @@ uint8_t I2C_QuickInit(uint32_t MAP, uint32_t baudrate)
 {
     uint8_t i;
     QuickInit_Type * pq = (QuickInit_Type*)&(MAP);
-    
+
     /* open drain and pull up */
     for(i = 0; i < pq->io_offset; i++)
     {
@@ -47,7 +47,7 @@ uint8_t I2C_QuickInit(uint32_t MAP, uint32_t baudrate)
 
     /* i2c_gpio struct setup */
     i2c.instace = pq->io_instance;
-    
+
     switch(MAP)
     {
         case I2C1_SCL_PE01_SDA_PE00:
@@ -82,7 +82,7 @@ uint8_t I2C_QuickInit(uint32_t MAP, uint32_t baudrate)
 
 void I2C_Init(I2C_InitTypeDef* I2C_InitStruct)
 {
-    
+
 }
 
 static inline uint8_t SDA_IN(void)
@@ -90,7 +90,7 @@ static inline uint8_t SDA_IN(void)
     return GPIO_ReadBit(i2c.instace, i2c.sda_pin);
 }
 
-static bool I2C_Start(void)
+int I2C_Start(void)
 {
     SDA_DDR_OUT();
     SDA_H();
@@ -99,10 +99,10 @@ static bool I2C_Start(void)
     SDA_L();
     I2C_DELAY();
     SCL_L();
-    return true;
+    return 1;
 }
 
-static void I2C_Stop(void)
+void I2C_Stop(void)
 {
     SCL_L();
     SDA_L();
@@ -135,26 +135,26 @@ static void I2C_NAck(void)
     I2C_DELAY();
 }
 
-static bool I2C_WaitAck(void)
+int I2C_WaitAck(void)
 {
     uint8_t ack;
     SDA_DDR_IN();
     SCL_L();
-    
+
     I2C_DELAY();
     SCL_H();
     I2C_DELAY();
     ack = SDA_IN();
     SCL_L();
     SDA_DDR_OUT();
-    
+
     return ack;
 }
 
-static void I2C_SendByte(uint8_t data)
+void I2C_SendByte(uint8_t data)
 {
     volatile uint8_t i;
-    
+
     i = 8;
     while(i--)
     {
@@ -172,7 +172,7 @@ static void I2C_SendByte(uint8_t data)
 static uint8_t I2C_GetByte(void)
 {
     uint8_t i,byte;
-    
+
     i = 8;
     byte = 0;
 
@@ -198,17 +198,17 @@ static uint8_t I2C_GetByte(void)
  *         @arg addrLen    : len of slave register addr(in byte)
  *         @arg buf        : data buf
  *         @arg buf        : read len
- * @note 
+ * @note
  */
 uint8_t I2C_BurstWrite(uint32_t instance ,uint8_t chipAddr, uint32_t addr, uint32_t addrLen, uint8_t *buf, uint32_t len)
 {
     uint8_t *p;
     uint8_t err;
-    
+
     p = (uint8_t*)&addr;
     err = 0;
     chipAddr <<= 1;
-    
+
     I2C_Start();
     I2C_SendByte(chipAddr);
     err += I2C_WaitAck();
@@ -218,11 +218,11 @@ uint8_t I2C_BurstWrite(uint32_t instance ,uint8_t chipAddr, uint32_t addr, uint3
         I2C_SendByte(*p++);
         err += I2C_WaitAck();
     }
-    
+
     while(len--)
     {
         I2C_SendByte(*buf++);
-        err += I2C_WaitAck();  
+        err += I2C_WaitAck();
     }
 
     I2C_Stop();
@@ -250,31 +250,31 @@ uint8_t I2C_WriteSingleRegister(uint32_t instance, uint8_t chipAddr, uint8_t add
  *         @arg addrLen    : len of slave register addr(in byte)
  *         @arg buf        : data buf
  *         @arg buf        : read len
- * @note 
+ * @note
  */
 int32_t I2C_BurstRead(uint32_t instance ,uint8_t chipAddr, uint32_t addr, uint32_t addrLen, uint8_t *buf, uint32_t len)
 {
     uint8_t *p;
     uint8_t err;
-    
+
     p = (uint8_t*)&addr;
     err = 0;
     chipAddr <<= 1;
-    
+
     I2C_Start();
     I2C_SendByte(chipAddr);
     err += I2C_WaitAck();
-    
+
     while(addrLen--)
     {
         I2C_SendByte(*p++);
         err += I2C_WaitAck();
     }
-    
+
     I2C_Start();
     I2C_SendByte(chipAddr+1);
     err += I2C_WaitAck();
-    
+
     while(len--)
     {
         *buf++ = I2C_GetByte();
@@ -283,10 +283,10 @@ int32_t I2C_BurstRead(uint32_t instance ,uint8_t chipAddr, uint32_t addr, uint32
             I2C_Ack();
         }
     }
-    
+
     I2C_NAck();
     I2C_Stop();
-    
+
     return err;
 }
 
@@ -299,10 +299,10 @@ int32_t I2C_BurstRead(uint32_t instance ,uint8_t chipAddr, uint32_t addr, uint32
 uint8_t I2C_Probe(uint32_t instance, uint8_t chipAddr)
 {
     uint8_t err;
-    
+
     err = 0;
     chipAddr <<= 1;
-    
+
     I2C_Start();
     I2C_SendByte(chipAddr);
     err = I2C_WaitAck();
@@ -328,28 +328,28 @@ int SCCB_ReadSingleRegister(uint32_t instance, uint8_t chipAddr, uint8_t addr, u
 {
     uint8_t err;
     uint8_t retry;
-    
+
     retry = 10;
     chipAddr <<= 1;
-    
+
     while(retry--)
     {
         err = 0;
         I2C_Start();
         I2C_SendByte(chipAddr);
         err += I2C_WaitAck();
-        
+
         I2C_SendByte(addr);
         err += I2C_WaitAck();
-        
+
         I2C_Stop();
         I2C_Start();
         I2C_SendByte(chipAddr+1);
         err += I2C_WaitAck();
-        
+
         *pData = I2C_GetByte();
        // err += I2C_WaitAck();
-        
+
         I2C_NAck();
         I2C_Stop();
         if(!err)
@@ -366,9 +366,9 @@ int SCCB_WriteSingleRegister(uint32_t instance, uint8_t chipAddr, uint8_t addr, 
 {
     uint8_t err;
     uint8_t retry;
-    
+
     retry = 10;
-    
+
     while(retry--)
     {
         err = I2C_WriteSingleRegister(instance, chipAddr, addr, data);
@@ -401,7 +401,7 @@ int SCCB_WriteSingleRegister(uint32_t instance, uint8_t chipAddr, uint8_t addr, 
 #else
     #define I2C_BASES {I2C0}
 #endif
-    
+
 #endif
 
 /* gloabl const table defination */
@@ -415,7 +415,7 @@ static const uint32_t SIM_I2CClockGateTable[] =
 #else
     SIM_SCGC4_I2C0_MASK,
 #endif
-    
+
 #ifdef I2C1
 #ifdef SIM_SCGC4_IIC1_MASK
     SIM_SCGC4_IIC1_MASK,
@@ -424,7 +424,7 @@ static const uint32_t SIM_I2CClockGateTable[] =
 #endif
 #endif
 };
-static const IRQn_Type I2C_IRQnTable[] = 
+static const IRQn_Type I2C_IRQnTable[] =
 {
     I2C0_IRQn,
 #ifdef I2C1
@@ -433,7 +433,7 @@ static const IRQn_Type I2C_IRQnTable[] =
 };
 
 //!< clock deiver struct (internal)
-typedef struct 
+typedef struct
 {
     uint8_t icr;            //!< F register ICR value.
     uint16_t sclDivider;    //!< SCL clock divider.
@@ -574,15 +574,15 @@ uint8_t I2C_QuickInit(uint32_t MAP, uint32_t baudrate)
     QuickInit_Type * pq = (QuickInit_Type*)&(MAP);
     I2C_InitStruct1.baudrate = baudrate;
     I2C_InitStruct1.instance = pq->ip_instance;
-    
+
     /* init pinmux and  open drain and pull up */
     for(i = 0; i < pq->io_offset; i++)
     {
         PORT_PinMuxConfig(pq->io_instance, pq->io_base + i, (PORT_PinMux_Type)pq->mux);
-        PORT_PinPullConfig(pq->io_instance, pq->io_base + i, kPullUp); 
+        PORT_PinPullConfig(pq->io_instance, pq->io_base + i, kPullUp);
         PORT_PinOpenDrainConfig(pq->io_instance, pq->io_base + i, ENABLE);
     }
-    
+
     /* init moudle */
     I2C_Init(&I2C_InitStruct1);
     return pq->ip_instance;
@@ -607,14 +607,14 @@ void I2C_Init(I2C_InitTypeDef* I2C_InitStruct)
     assert_param(IS_I2C_ALL_INSTANCE(I2C_InitStruct->instance));
     uint32_t freq;
     SIM->SCGC4 |= SIM_I2CClockGateTable[I2C_InitStruct->instance];
-    
+
     /* disable first */
     I2C_InstanceTable[I2C_InitStruct->instance]->C1 &= ~I2C_C1_IICEN_MASK;
-    
+
     /* set baudrate */
     CLOCK_GetClockFrequency(kBusClock, &freq);
     I2C_SetBaudrate(I2C_InitStruct->instance, freq, I2C_InitStruct->baudrate);
-    
+
     /* enable i2c */
     I2C_InstanceTable[I2C_InitStruct->instance]->C1 |= I2C_C1_IICEN_MASK;
 }
@@ -625,7 +625,7 @@ void I2C_Init(I2C_InitTypeDef* I2C_InitStruct)
  *     //使用i2c的1模块产生开始信号
  *     I2C_GenerateSTART(HW_I2C1);
  * @endcode
- * @param  instance :I2C模块号 
+ * @param  instance :I2C模块号
  *         @arg HW_I2C0  :I2C0模块
  *         @arg HW_I2C1  :I2C1模块
  *         @arg HW_I2C2  :I2C2模块
@@ -645,7 +645,7 @@ void I2C_GenerateSTART(uint32_t instance)
  *     //使用i2c的1模块产生开始信号
  *     I2C_GenerateRESTART(HW_I2C1);
  * @endcode
- * @param  instance :I2C模块号 
+ * @param  instance :I2C模块号
  *         @arg HW_I2C0  :I2C0模块
  *         @arg HW_I2C1  :I2C1模块
  *         @arg HW_I2C2  :I2C2模块
@@ -664,7 +664,7 @@ void I2C_GenerateRESTART(uint32_t instance)
  *     //使用i2c的1模块产生停止信号
  *     I2C_GenerateSTOP(HW_I2C1);
  * @endcode
- * @param  instance :I2C模块号 
+ * @param  instance :I2C模块号
  *         @arg HW_I2C0  :I2C0模块
  *         @arg HW_I2C1  :I2C1模块
  *         @arg HW_I2C2  :I2C2模块
@@ -684,7 +684,7 @@ void I2C_GenerateSTOP(uint32_t instance)
  *     //使用i2c的1模块发送数据0x5A
  *     I2C_SendData(HW_I2C1, 0x5A);
  * @endcode
- * @param  instance :I2C模块号 
+ * @param  instance :I2C模块号
  *         @arg HW_I2C0  :I2C0模块
  *         @arg HW_I2C1  :I2C1模块
  *         @arg HW_I2C2  :I2C2模块
@@ -705,7 +705,7 @@ void I2C_SendData(uint32_t instance, uint8_t data)
  *      uint8_t data; //存储接收到的数据
  *     data = I2C_ReadData(HW_I2C1);
  * @endcode
- * @param  instance :I2C模块号 
+ * @param  instance :I2C模块号
  *         @arg HW_I2C0  :I2C0模块
  *         @arg HW_I2C1  :I2C1模块
  *         @arg HW_I2C2  :I2C2模块
@@ -723,7 +723,7 @@ uint8_t I2C_ReadData(uint32_t instance)
  *     //使用i2c的1模块向地址为0x55的从机读取数据
  *    I2C_Send7bitAddress(HW_I2C1, 0x55, kI2C_Read);
  * @endcode
- * @param  instance :I2C模块号 
+ * @param  instance :I2C模块号
  *         @arg HW_I2C0  :I2C0模块
  *         @arg HW_I2C1  :I2C1模块
  *         @arg HW_I2C2  :I2C2模块
@@ -743,9 +743,9 @@ void I2C_Send7bitAddress(uint32_t instance, uint8_t address, I2C_Direction_Type 
 }
 
 /**
- * @brief  等待应答信号 
+ * @brief  等待应答信号
  * @note   此函数一般在使用SendData函数后调用 用于等待应答信号
- * @param  instance :I2C模块号 
+ * @param  instance :I2C模块号
  *         @arg HW_I2C0  :I2C0模块
  *         @arg HW_I2C1  :I2C1模块
  *         @arg HW_I2C2  :I2C2模块
@@ -792,7 +792,7 @@ uint8_t I2C_WaitAck(uint32_t instance)
  *     //使用i2c的1模块读取数据
  *    I2C_SetMasterMode(HW_I2C1, kI2C_Read);
  * @endcode
- * @param  instance :I2C模块号 
+ * @param  instance :I2C模块号
  *         @arg HW_I2C0  :I2C0模块
  *         @arg HW_I2C1  :I2C1模块
  *         @arg HW_I2C2  :I2C2模块
@@ -809,7 +809,7 @@ void I2C_SetMasterMode(uint32_t instance, I2C_Direction_Type direction)
 }
 /**
  * @brief  产生 NACK 信号
- * @param  instance :I2C模块号 
+ * @param  instance :I2C模块号
  *         @arg HW_I2C0  :I2C0模块
  *         @arg HW_I2C1  :I2C1模块
  *         @arg HW_I2C2  :I2C2模块
@@ -823,7 +823,7 @@ void I2C_GenerateNAck(uint32_t instance)
 }
 /**
  * @brief  产生 ACK 信号
- * @param  instance :I2C模块号 
+ * @param  instance :I2C模块号
  *         @arg HW_I2C0  :I2C0模块
  *         @arg HW_I2C1  :I2C1模块
  *         @arg HW_I2C2  :I2C2模块
@@ -837,12 +837,12 @@ void I2C_GenerateAck(uint32_t instance)
 }
 /**
  * @brief  I2C模块中断或DMA功能设置
- * @param  instance :I2C模块号 
+ * @param  instance :I2C模块号
  *         @arg HW_I2C0  :I2C0模块
  *         @arg HW_I2C1  :I2C1模块
  *         @arg HW_I2C2  :I2C2模块
  * @param  config  :中断或DMA类型
- *         @arg kI2C_IT_Disable  :关闭中断 
+ *         @arg kI2C_IT_Disable  :关闭中断
  *         @arg kI2C_DMA_Disable :关闭DMA
  *         @arg kI2C_IT_BTC,     :开启发送完成中断
  *         @arg kI2C_DMA_BTC     :开启发送完成DMA功能
@@ -858,7 +858,7 @@ void I2C_ITDMAConfig(uint32_t instance, I2C_ITDMAConfig_Type config)
             NVIC_DisableIRQ(I2C_IRQnTable[instance]);
             I2C_InstanceTable[instance]->C1 &= ~I2C_C1_IICIE_MASK;
             break;
-        case kI2C_DMA_Disable: 
+        case kI2C_DMA_Disable:
             I2C_InstanceTable[instance]->C1 &= ~I2C_C1_DMAEN_MASK;
             break;
         case kI2C_IT_BTC:
@@ -875,7 +875,7 @@ void I2C_ITDMAConfig(uint32_t instance, I2C_ITDMAConfig_Type config)
 
 /**
  * @brief  注册中断回调函数
- * @param  instance :I2C模块号 
+ * @param  instance :I2C模块号
  *         @arg HW_I2C0  :I2C0模块
  *         @arg HW_I2C1  :I2C1模块
  *         @arg HW_I2C2  :I2C2模块
@@ -893,7 +893,7 @@ void I2C_CallbackInstall(uint32_t instance, I2C_CallBackType AppCBFun)
 
 /**
  * @brief  检测I2C状态
- * @param  instance :I2C模块号 
+ * @param  instance :I2C模块号
  *         @arg HW_I2C0  :I2C0模块
  *         @arg HW_I2C1  :I2C1模块
  *         @arg HW_I2C2  :I2C2模块
@@ -917,7 +917,7 @@ uint8_t I2C_IsBusy(uint32_t instance)
  *     //使用i2c的1模块读取数据地址为0x55的从机中起始地址为0x01的数据10字节,存储在data的首地址
  *    I2C_BurstRead(HW_I2C1, 0x55, 0x01, 1, &data, 10);
  * @endcode
- * @param  instance :I2C模块号 
+ * @param  instance :I2C模块号
  *         @arg HW_I2C0  :I2C0模块
  *         @arg HW_I2C1  :I2C1模块
  *         @arg HW_I2C2  :I2C2模块
@@ -1010,7 +1010,7 @@ int32_t I2C_BurstRead(uint32_t instance, uint8_t deviceAddress, uint32_t subAddr
  *     //使用i2c的1模块将data中的10字节数据写入地址为0x55的从机中起始地址为0x01的设备宏
  *    I2C_BurstWrite(HW_I2C1, 0x55, 0x01, 1, &data, 10);
  * @endcode
- * @param  instance :I2C模块号 
+ * @param  instance :I2C模块号
  *         @arg HW_I2C0  :I2C0模块
  *         @arg HW_I2C1  :I2C1模块
  *         @arg HW_I2C2  :I2C2模块
@@ -1082,7 +1082,7 @@ uint8_t I2C_BurstWrite(uint32_t instance ,uint8_t deviceAddress, uint32_t subAdd
  *     //使用i2c的1模块将data中的1字节数据写入地址为0x55的从机中地址为0x01的设备
  *    I2C_WriteSingleRegister(HW_I2C1, 0x55, 0x01, data);
  * @endcode
- * @param  instance :I2C模块号 
+ * @param  instance :I2C模块号
  *         @arg HW_I2C0  :I2C0模块
  *         @arg HW_I2C1  :I2C1模块
  *         @arg HW_I2C2  :I2C2模块
@@ -1102,7 +1102,7 @@ uint8_t I2C_WriteSingleRegister(uint32_t instance, uint8_t deviceAddress, uint8_
  *     //使用i2c的1模块读取地址为0x55的从机中地址为0x01的数据，存储到data中
  *    I2C_WriteSingleRegister(HW_I2C1, 0x55, 0x01, &data);
  * @endcode
- * @param  instance :I2C模块号 
+ * @param  instance :I2C模块号
  *         @arg HW_I2C0  :I2C0模块
  *         @arg HW_I2C1  :I2C1模块
  *         @arg HW_I2C2  :I2C2模块
@@ -1197,7 +1197,7 @@ void I2C0_IRQHandler(void)
     {
         I2C_CallBackTable[HW_I2C0]();
     }
-    
+
 }
 
 #ifdef I2C1

@@ -212,7 +212,13 @@
       <name>$PROJ_DIR$\..\..\..\..\Libraries\drivers\K\src\i2c.c</name>
     </file>
     <file>
+      <name>$PROJ_DIR$\..\..\..\..\Libraries\drivers\K\inc\i2c.h</name>
+    </file>
+    <file>
       <name>$PROJ_DIR$\..\..\..\..\Libraries\drivers\K\src\lptmr.c</name>
+      <configuration>
+        <name>mk60d10</name>
+      </configuration>
     </file>
     <file>
       <name>$PROJ_DIR$\..\..\..\..\Libraries\devices\src\ov7725.c</name>

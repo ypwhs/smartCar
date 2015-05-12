@@ -4,6 +4,8 @@
 -I
 \\psf\Home\Desktop\智能车2\smartCar\Project\test\test\IAR\..\..\..\..\Libraries\drivers\K\inc
 -I
+\\psf\Home\Desktop\智能车2\smartCar\Project\test\test\IAR\..\..\..\..\Libraries\drivers\K\src
+-I
 \\psf\Home\Desktop\智能车2\smartCar\Project\test\test\IAR\..\..\..\..\Libraries\devices\inc
 -I
 \\psf\Home\Desktop\智能车2\smartCar\Project\test\test\IAR\..\..\..\..\Libraries\startup\CoreSupport
@@ -17,6 +19,8 @@ C:\Program Files (x86)\IAR Systems\Embedded Workbench 7.0\arm\inc
 C:\Program Files (x86)\IAR Systems\Embedded Workbench 7.0\arm\inc\c
 -I
 \\psf\Home\Desktop\智能车2\smartCar\Libraries\drivers\K\inc
+-I
+\\psf\Home\Desktop\智能车2\smartCar\Libraries\drivers\K\src
 -I
 \\psf\Home\Desktop\智能车2\smartCar\Libraries\devices\inc
 -I
@@ -219,8 +223,8 @@ C:\Program Files (x86)\IAR Systems\Embedded Workbench 7.0\arm\inc\c
 -D__HAS_LOCATED_DECLARATION__=1
 -D__HAS_LOCATED_WITH_INIT__=1
 -D__IAR_COMPILERBASE__=593924
--D__DATE__="May 11 2015"
--D__TIME__="23:08:12"
+-D__DATE__="May 12 2015"
+-D__TIME__="01:19:28"
 -D__STDC__=1
 -D__STDC_VERSION__=199901L
 -D__STDC_HOSTED__=1

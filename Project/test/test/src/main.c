@@ -207,12 +207,12 @@ const uchar8 F8X16[]=
 };
 
 void Write_SPI_Command(unsigned char data){
-    PEout(4) = 0;
-    SPI_ReadWriteByte(HW_SPI1, HW_CTAR0, data, HW_SPI_CS0, kSPI_PCS_ReturnInactive);
+    PDout(4) = 0;
+    SPI_ReadWriteByte(HW_SPI0, HW_CTAR0, data, HW_SPI_CS0, kSPI_PCS_ReturnInactive);
 }
 void Write_SPI_Data(unsigned char data){
-    PEout(4) = 1;
-    SPI_ReadWriteByte(HW_SPI1, HW_CTAR0, data, HW_SPI_CS0, kSPI_PCS_ReturnInactive);
+    PDout(4) = 1;
+    SPI_ReadWriteByte(HW_SPI0, HW_CTAR0, data, HW_SPI_CS0, kSPI_PCS_ReturnInactive);
 }
 /*****************************************************************************
  函 数 名 : LED_WrDat
@@ -449,11 +449,15 @@ void SetNop(void)
 *****************************************************************************/
 void initOLED(void)
 {
-    uchar8 i;
+    GPIO_QuickInit(HW_GPIOD, 4, kGPIO_Mode_OPP);
+    GPIO_QuickInit(HW_GPIOD, 5, kGPIO_Mode_OPP);
 
-    PEout(5) = 0;
+    SPI_QuickInit(SPI0_SCK_PD01_SOUT_PD02_SIN_PD03, kSPI_CPOL0_CPHA0, 8*1000*1000);
+
+
+    PDout(5) = 0;
     DelayMs(1);
-    PEout(5) = 1;
+    PDout(5) = 1;
     //Reset and Wait
 
     SetDisplayOnOff(0x00); // Display Off (0x00/0x01)
@@ -534,6 +538,7 @@ void UART_RX_ISR(uint16_t byteRec){
         as_pos=0;
         as[0]=0;
     }
+    printf("%c", byteRec);
 }
 
 int main(void)
@@ -541,8 +546,6 @@ int main(void)
     DelayInit();
     /* 打印串口及小灯 */
     GPIO_QuickInit(HW_GPIOC, 3, kGPIO_Mode_OPP);
-    GPIO_QuickInit(HW_GPIOE, 4, kGPIO_Mode_OPP);
-    GPIO_QuickInit(HW_GPIOE, 5, kGPIO_Mode_OPP);
 
     UART_QuickInit(UART0_RX_PB16_TX_PB17, 115200);
     /* 注册中断回调函数 */
@@ -551,12 +554,10 @@ int main(void)
     /* 开启UART Rx中断 */
     UART_ITDMAConfig(HW_UART0, kUART_IT_Rx, true);
 
-    SPI_QuickInit(SPI1_SCK_PE02_SOUT_PE01_SIN_PE03, kSPI_CPOL0_CPHA0, 8*1000*1000);
 
     printf("OLED test\r\n");
 
     initOLED();
-    LED_Fill(0x00);
     while(1)
     {
         GPIO_ToggleBit(HW_GPIOC, 3);

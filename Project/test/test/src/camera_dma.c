@@ -1,86 +1,12 @@
-#include "gpio.h"
-#include "common.h"
-#include "uart.h"
-#include "dma.h"
-
-#include "i2c.h"
-#include "ov7725.h"
-
-
-/* 请将I2C.H中的 I2C_GPIO_SIM 改为 1 */
-
-// 改变图像大小
-//0: 80x60
-//1: 160x120
-//2: 240x180
-//#define IMAGE_SIZE  0
-//
-//#if (IMAGE_SIZE  ==  0)
-//#define OV7620_W    (80)
-//#define OV7620_H    (60)
-//
-//#elif (IMAGE_SIZE == 1)
-//#define OV7620_W    (160)
-//#define OV7620_H    (120)
-//
-//#elif (IMAGE_SIZE == 2)
-//#define OV7620_W    (240)
-//#define OV7620_H    (180)
-//
-//#else
-//#error "Image Size Not Support!"
-//#endif
-
-#define OV7620_W    (80)
-#define OV7620_H    (60)
-
-// 图像内存池
-static uint8_t gCCD_RAM[(OV7620_H)*((OV7620_W/8)+1)];   //使用内部RAM
-
-/* 行指针 */
-static uint8_t * gpHREF[OV7620_H+1];
-
-/* 引脚定义 PCLK VSYNC HREF 接到同一个PORT上 */
-#define BOARD_OV7620_PCLK_PORT      HW_GPIOE
-#define BOARD_OV7620_PCLK_PIN       (8)
-#define BOARD_OV7620_VSYNC_PORT     HW_GPIOE
-#define BOARD_OV7620_VSYNC_PIN      (10)
-#define BOARD_OV7620_HREF_PORT      HW_GPIOE
-#define BOARD_OV7620_HREF_PIN       (9)
-/*
-摄像头数据引脚PTA8-PTA15 只能填入 0 8 16三个值
-0 :PTA0-PTA7
-8 :PTA8-PTA15
-16:PTA16-PTA24
-*/
-#define BOARD_OV7620_DATA_OFFSET    (0)
-
-/* 状态机定义 */
-typedef enum
-{
-    TRANSFER_IN_PROCESS, //数据在处理
-    NEXT_FRAME,          //下一帧数据
-}OV7620_Status;
+#include "camera_dma.h"
 
 void printBin(uint8_t data){
     uint8_t i;
     for(i=0;i<8;i++){
-        printf("%c", data%2>0?'*':'.');
+        printf("%c", data>>7>0?'*':'.');
         data/=2;
     }
 }
-
-/* 接收完成一场后 用户处理函数 */
-static void UserApp(uint32_t vcount)
-{
-    for(int i=0;i<OV7620_W/8;i++)
-        //printf("%d", gpHREF[10][i]>127);
-        printBin(gpHREF[10][i]);
-        //printf("%d,", gpHREF[10][i]);
-    printf("\n");
-
-}
-
 
 int SCCB_Init(uint32_t I2C_MAP)
 {
@@ -146,17 +72,9 @@ void OV_ISR(uint32_t index)
     }
 }
 
-
-
-int main(void)
-{
-    uint32_t i;
-    DelayInit();
-    /* 打印串口及小灯 */
-    GPIO_QuickInit(HW_GPIOE, 6, kGPIO_Mode_OPP);
-    UART_QuickInit(UART0_RX_PB16_TX_PB17, 115200);
-
-    printf("OV7725 test\r\n");
+void initCamera(){
+    uint16_t i;
+    printf("initCamera\r\n");
 
     //检测摄像头
     if(SCCB_Init(I2C0_SCL_PB00_SDA_PB01))
@@ -189,7 +107,7 @@ int main(void)
     /* 初始化数据端口 */
     for(i=0;i<8;i++)
     {
-        GPIO_QuickInit(HW_GPIOE, BOARD_OV7620_DATA_OFFSET+i, kGPIO_Mode_IFT);
+        GPIO_QuickInit(HW_GPIOE, i, kGPIO_Mode_IFT);
     }
 
     //DMA配置
@@ -199,7 +117,7 @@ int main(void)
     DMA_InitStruct1.minorLoopByteCnt = 1;
     DMA_InitStruct1.majorLoopCnt = ((OV7620_W/8) +1);
 
-    DMA_InitStruct1.sAddr = (uint32_t)&PTE->PDIR + BOARD_OV7620_DATA_OFFSET/8;
+    DMA_InitStruct1.sAddr = (uint32_t)&PTE->PDIR;
     DMA_InitStruct1.sLastAddrAdj = 0;
     DMA_InitStruct1.sAddrOffset = 0;
     DMA_InitStruct1.sDataWidth = kDMA_DataWidthBit_8;
@@ -214,8 +132,4 @@ int main(void)
     /* initialize DMA moudle */
     DMA_Init(&DMA_InitStruct1);
 
-    while(1)
-    {
-
-    }
 }

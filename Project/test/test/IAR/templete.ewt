@@ -278,12 +278,6 @@
   <group>
     <name>user</name>
     <file>
-      <name>$PROJ_DIR$\..\src\camera_dma.c</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\src\camera_dma.h</name>
-    </file>
-    <file>
       <name>$PROJ_DIR$\..\src\main.c</name>
       <configuration>
         <name>mk60d10</name>

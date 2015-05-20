@@ -2258,18 +2258,6 @@
   <group>
     <name>user</name>
     <file>
-      <name>$PROJ_DIR$\..\src\camera_dma.c</name>
-      <excluded>
-        <configuration>mk60d10</configuration>
-      </excluded>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\src\camera_dma.h</name>
-      <excluded>
-        <configuration>mk60d10</configuration>
-      </excluded>
-    </file>
-    <file>
       <name>$PROJ_DIR$\..\src\main.c</name>
       <configuration>
         <name>mk60d10</name>

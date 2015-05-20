@@ -6,6 +6,7 @@
 #include "i2c.h"
 #include "ov7725.h"
 
+#include "oled_spi.h"
 
 /* 请将I2C.H中的 I2C_GPIO_SIM 改为 1 */
 
@@ -63,10 +64,9 @@ typedef enum
 }OV7620_Status;
 
 void printBin(uint8_t data){
-    uint8_t i;
-    for(i=0;i<8;i++){
-        printf("%c", data%2>0?'*':'.');
-        data/=2;
+    int i;
+    for(i=7;i>=0;i--){
+        printf("%c", (data>>i)%2>0?'*':'.');
     }
 }
 
@@ -74,13 +74,10 @@ void printBin(uint8_t data){
 static void UserApp(uint32_t vcount)
 {
     for(int i=0;i<OV7620_W/8;i++)
-        //printf("%d", gpHREF[10][i]>127);
-        printBin(gpHREF[10][i]);
-        //printf("%d,", gpHREF[10][i]);
+        printBin(gpHREF[10][i+1]);
     printf("\n");
 
 }
-
 
 int SCCB_Init(uint32_t I2C_MAP)
 {
@@ -146,17 +143,10 @@ void OV_ISR(uint32_t index)
     }
 }
 
+void initCamera(){
 
-
-int main(void)
-{
     uint32_t i;
-    DelayInit();
-    /* 打印串口及小灯 */
-    GPIO_QuickInit(HW_GPIOE, 6, kGPIO_Mode_OPP);
-    UART_QuickInit(UART0_RX_PB16_TX_PB17, 115200);
-
-    printf("OV7725 test\r\n");
+    printf("OV7725 init\r\n");
 
     //检测摄像头
     if(SCCB_Init(I2C0_SCL_PB00_SDA_PB01))
@@ -213,6 +203,20 @@ int main(void)
 
     /* initialize DMA moudle */
     DMA_Init(&DMA_InitStruct1);
+}
+
+
+int main(void)
+{
+
+    DelayInit();
+    /* 打印串口及小灯 */
+
+    GPIO_QuickInit(HW_GPIOC, 3, kGPIO_Mode_OPP);
+    UART_QuickInit(UART0_RX_PB16_TX_PB17, 115200);
+
+    initCamera();
+    initOLED();
 
     while(1)
     {

@@ -437,48 +437,6 @@ void SetNop(void)
 }
 
 /*****************************************************************************
- 函 数 名 : LED_Init
- 功能描述 : OLED初始化
- 输入参数 : void
- 输出参数 : NONE
- 返 回 值 : NONE
-*****************************************************************************/
-void initOLED(void)
-{
-    GPIO_QuickInit(HW_GPIOD, 4, kGPIO_Mode_OPP);
-    GPIO_QuickInit(HW_GPIOD, 5, kGPIO_Mode_OPP);
-
-    SPI_QuickInit(SPI0_SCK_PD01_SOUT_PD02_SIN_PD03, kSPI_CPOL0_CPHA0, 8*1000*1000);
-
-
-    PDout(5) = 0;
-    DelayMs(1);
-    PDout(5) = 1;
-    //Reset and Wait
-
-    SetDisplayOnOff(0x00); // Display Off (0x00/0x01)
-    SetDisplayClock(0x80); // Set Clock as 100 Frames/Sec
-    SetMultiplexRatio(0x3F); // 1/64 Duty (0x0F~0x3F)
-    SetDisplayOffset(0x00); // Shift Mapping RAM Counter (0x00~0x3F)
-    SetStartLine(0x00); // Set Mapping RAM Display Start Line (0x00~0x3F)
-    SetChargePump(0x04); // Enable Embedded DC/DC Converter (0x00/0x04)
-    SetAddressingMode(0x02); // Set Page Addressing Mode (0x00/0x01/0x02)
-    SetSegmentRemap(0x01); // Set SEG/Column Mapping 0x00左右反置 0x01正常
-    SetCommonRemap(0x08); // Set COM/Row Scan Direction 0x00上下反置 0x08正常
-    SetCommonConfig(0x10); // Set Sequential Configuration (0x00/0x10)
-    SetContrastControl(0xCF); // Set SEG Output Current
-    SetPrechargePeriod(0xF1); // Set Pre-Charge as 15 Clocks & Discharge as 1 Clock
-    SetVCOMH(0x40); // Set VCOM Deselect Level
-    SetEntireDisplay(0x00); // Disable Entire Display On (0x00/0x01)
-    SetInverseDisplay(0x00); // Disable Inverse Display On (0x00/0x01)
-    SetDisplayOnOff(0x01); // Display On (0x00/0x01)
-    LED_Fill(0x00); // 初始清屏
-    LED_SetPos(0,0);
-
-    return;
-}
-
-/*****************************************************************************
  函 数 名 : LED_P8x16Str
  功能描述 : 写入一组8x16标准ASCII字符串
  输入参数 : UCHAR8 ucIdxX 为显示的横坐标0~120
@@ -520,3 +478,46 @@ void LED_P8x16Str(uchar8 ucIdxX, uchar8 ucIdxY, uchar8 ucDataStr[])
 
     return;
 }
+
+/*****************************************************************************
+ 函 数 名 : LED_Init
+ 功能描述 : OLED初始化
+ 输入参数 : void
+ 输出参数 : NONE
+ 返 回 值 : NONE
+*****************************************************************************/
+void initOLED(void)
+{
+    for(int i = 1;i < 6; i++)
+        GPIO_QuickInit(HW_GPIOD, i, kGPIO_Mode_OPP);
+
+    SPI_QuickInit(SPI0_SCK_PD01_SOUT_PD02_SIN_PD03, kSPI_CPOL0_CPHA0, 8*1000*1000);
+
+    PDout(5) = 0;
+    DelayMs(1);
+    PDout(5) = 1;
+    //Reset and Wait
+
+    SetDisplayOnOff(0x00); // Display Off (0x00/0x01)
+    SetDisplayClock(0x80); // Set Clock as 100 Frames/Sec
+    SetMultiplexRatio(0x3F); // 1/64 Duty (0x0F~0x3F)
+    SetDisplayOffset(0x00); // Shift Mapping RAM Counter (0x00~0x3F)
+    SetStartLine(0x00); // Set Mapping RAM Display Start Line (0x00~0x3F)
+    SetChargePump(0x04); // Enable Embedded DC/DC Converter (0x00/0x04)
+    SetAddressingMode(0x02); // Set Page Addressing Mode (0x00/0x01/0x02)
+    SetSegmentRemap(0x01); // Set SEG/Column Mapping 0x00左右反置 0x01正常
+    SetCommonRemap(0x00); // Set COM/Row Scan Direction 0x00上下反置 0x08正常
+    SetCommonConfig(0x10); // Set Sequential Configuration (0x00/0x10)
+    SetContrastControl(0xCF); // Set SEG Output Current
+    SetPrechargePeriod(0xF1); // Set Pre-Charge as 15 Clocks & Discharge as 1 Clock
+    SetVCOMH(0x40); // Set VCOM Deselect Level
+    SetEntireDisplay(0x00); // Disable Entire Display On (0x00/0x01)
+    SetInverseDisplay(0x00); // Disable Inverse Display On (0x00/0x01)
+    SetDisplayOnOff(0x01); // Display On (0x00/0x01)
+    LED_Fill(0x00); // 初始清屏
+    LED_SetPos(0,0);
+
+    printf("OLED init OK\r\n");
+    return;
+}
+

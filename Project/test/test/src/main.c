@@ -14,32 +14,29 @@
 //0: 80x60
 //1: 160x120
 //2: 240x180
-//#define IMAGE_SIZE  0
-//
-//#if (IMAGE_SIZE  ==  0)
-//#define OV7620_W    (80)
-//#define OV7620_H    (60)
-//
-//#elif (IMAGE_SIZE == 1)
-//#define OV7620_W    (160)
-//#define OV7620_H    (120)
-//
-//#elif (IMAGE_SIZE == 2)
-//#define OV7620_W    (240)
-//#define OV7620_H    (180)
-//
-//#else
-//#error "Image Size Not Support!"
-//#endif
+#define IMAGE_SIZE  0
 
+#if (IMAGE_SIZE  ==  0)
 #define OV7620_W    (80)
 #define OV7620_H    (60)
 
+#elif (IMAGE_SIZE == 1)
+#define OV7620_W    (160)
+#define OV7620_H    (120)
+
+#elif (IMAGE_SIZE == 2)
+#define OV7620_W    (240)
+#define OV7620_H    (180)
+
+#else
+#error "Image Size Not Support!"
+#endif
+
 // 图像内存池
-static uint8_t gCCD_RAM[(OV7620_H)*((OV7620_W/8)+1)];   //使用内部RAM
+uint8_t gCCD_RAM[(OV7620_H)*((OV7620_W/8)+1)];   //使用内部RAM
 
 /* 行指针 */
-static uint8_t * gpHREF[OV7620_H+1];
+uint8_t * gpHREF[OV7620_H+1];
 
 /* 引脚定义 PCLK VSYNC HREF 接到同一个PORT上 */
 #define BOARD_OV7620_PCLK_PORT      HW_GPIOE
@@ -56,28 +53,15 @@ static uint8_t * gpHREF[OV7620_H+1];
 */
 #define BOARD_OV7620_DATA_OFFSET    (0)
 
+static void UserApp(uint32_t vcount);
+//定义一帧结束后用户函数
+
 /* 状态机定义 */
 typedef enum
 {
     TRANSFER_IN_PROCESS, //数据在处理
     NEXT_FRAME,          //下一帧数据
 }OV7620_Status;
-
-void printBin(uint8_t data){
-    int i;
-    for(i=7;i>=0;i--){
-        printf("%c", (data>>i)%2>0?'*':'.');
-    }
-}
-
-/* 接收完成一场后 用户处理函数 */
-static void UserApp(uint32_t vcount)
-{
-    for(int i=0;i<OV7620_W/8;i++)
-        printBin(gpHREF[10][i+1]);
-    printf("\n");
-
-}
 
 int SCCB_Init(uint32_t I2C_MAP)
 {
@@ -89,7 +73,7 @@ int SCCB_Init(uint32_t I2C_MAP)
     {
         return 1;
     }
-    r = ov7725_set_image_size((ov7725_size)0);
+    r = ov7725_set_image_size(IMAGE_SIZE);
     if(r)
     {
         printf("OV7725 set image error\r\n");
@@ -144,9 +128,9 @@ void OV_ISR(uint32_t index)
 }
 
 void initCamera(){
-
     uint32_t i;
-    printf("OV7725 init\r\n");
+
+    printf("OV7725 test\r\n");
 
     //检测摄像头
     if(SCCB_Init(I2C0_SCL_PB00_SDA_PB01))
@@ -205,6 +189,45 @@ void initCamera(){
     DMA_Init(&DMA_InitStruct1);
 }
 
+uint8_t bin8_rev(uint8_t data)
+{
+    data=((data&0xf0)>>4) | ((data&0x0f)<<4);
+    data=((data&0xCC)>>2) | ((data&0x33)<<2);
+    data=((data&0xAA)>>1) | ((data&0x55)<<1);
+    return data;
+}
+
+void printBin(uint8_t data){
+    int i;
+    for(i=7;i>=0;i--){
+        printf("%c", (data>>i)%2>0?'*':'.');
+    }
+}
+
+/* 接收完成一场后 用户处理函数 */
+static void UserApp(uint32_t vcount)
+{
+    for(int x=0;x<8;x++){
+        LED_WrCmd(0xb0 + x); //0xb0+0~7表示页0~7
+        LED_WrCmd(0x00); //0x00+0~16表示将128列分成16组其地址在某组中的第几列
+        LED_WrCmd(0x10); //0x10+0~16表示将128列分成16组其地址所在第几组
+        for(int y=0;y<OV7620_H-1;y++){
+            uint8_t rev = bin8_rev(gpHREF[y][x+1]);
+            LED_WrDat(rev);        //输出反转二进制
+        }
+    }
+}
+
+//串口接收中断
+void UART_RX_ISR(uint16_t byteRec){
+    for(int y=0;y<OV7620_H-1;y++){
+        for(int x=0;x<8;x++){
+            printBin(gpHREF[y][x+1]);
+        }
+    printf("\r\n");
+    }
+    printf("\r\n\r\n");
+}
 
 int main(void)
 {
@@ -214,9 +237,14 @@ int main(void)
 
     GPIO_QuickInit(HW_GPIOC, 3, kGPIO_Mode_OPP);
     UART_QuickInit(UART0_RX_PB16_TX_PB17, 115200);
+    /* 注册中断回调函数 */
+    UART_CallbackRxInstall(HW_UART0, UART_RX_ISR);
 
-    initCamera();
+    /* 开启UART Rx中断 */
+    UART_ITDMAConfig(HW_UART0, kUART_IT_Rx, true);
+
     initOLED();
+    initCamera();
 
     while(1)
     {

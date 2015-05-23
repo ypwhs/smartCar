@@ -218,20 +218,12 @@ uint8_t gIMG[OV7620_W][OV7620_H];   //使用内部RAM
 /* 接收完成一场后 用户处理函数 */
 static void UserApp(uint32_t vcount)
 {
-//    for(int x=0;x<8;x++){
-//        LED_WrCmd(0xb0 + x); //0xb0+0~7表示页0~7
-//        LED_WrCmd(0x00); //0x00+0~16表示将128列分成16组其地址在某组中的第几列
-//        LED_WrCmd(0x10); //0x10+0~16表示将128列分成16组其地址所在第几组
-//        for(int y=0;y<OV7620_H-1;y++){
-//            uint8_t rev = bin8_rev(gpHREF[y][x+1]);
-//            LED_WrDat(rev);        //输出反转二进制
-//        }
-//    }
 
     for(int y=0;y<OV7620_H-1;y++)
         for(int x=0;x<OV7620_W/8;x++)
             for(int i=0; i<8; i++)
                 gIMG[x*8+i][y] = (gpHREF[y][x+1]>>(7-i))%2;
+    //将图片从OV7620_H*OV7620_W/8映射到OV7620_H*OV7620_W
 
     for(int y=0;y<(OV7620_H)/8;y++){
         LED_WrCmd(0xb0 + y); //0xb0+0~7表示页0~7

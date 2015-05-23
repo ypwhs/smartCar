@@ -506,7 +506,7 @@ void initOLED(void)
     SetChargePump(0x04); // Enable Embedded DC/DC Converter (0x00/0x04)
     SetAddressingMode(0x02); // Set Page Addressing Mode (0x00/0x01/0x02)
     SetSegmentRemap(0x01); // Set SEG/Column Mapping 0x00左右反置 0x01正常
-    SetCommonRemap(0x00); // Set COM/Row Scan Direction 0x00上下反置 0x08正常
+    SetCommonRemap(0x08); // Set COM/Row Scan Direction 0x00上下反置 0x08正常
     SetCommonConfig(0x10); // Set Sequential Configuration (0x00/0x10)
     SetContrastControl(0xCF); // Set SEG Output Current
     SetPrechargePeriod(0xF1); // Set Pre-Charge as 15 Clocks & Discharge as 1 Clock

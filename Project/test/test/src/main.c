@@ -73,7 +73,7 @@ int SCCB_Init(uint32_t I2C_MAP)
     {
         return 1;
     }
-    r = ov7725_set_image_size(IMAGE_SIZE);
+    r = ov7725_set_image_size((ov7725_size)IMAGE_SIZE);
     if(r)
     {
         printf("OV7725 set image error\r\n");
@@ -204,16 +204,44 @@ void printBin(uint8_t data){
     }
 }
 
+
+// 图像内存池
+//uint8_t gCCD_RAM[(OV7620_H)*((OV7620_W/8)+1)];   //使用内部RAM
+
+/* 行指针 */
+//uint8_t * gpHREF[OV7620_H+1];
+
+// IMG
+uint8_t gIMG[OV7620_W][OV7620_H];   //使用内部RAM
+
+
 /* 接收完成一场后 用户处理函数 */
 static void UserApp(uint32_t vcount)
 {
-    for(int x=0;x<8;x++){
-        LED_WrCmd(0xb0 + x); //0xb0+0~7表示页0~7
+//    for(int x=0;x<8;x++){
+//        LED_WrCmd(0xb0 + x); //0xb0+0~7表示页0~7
+//        LED_WrCmd(0x00); //0x00+0~16表示将128列分成16组其地址在某组中的第几列
+//        LED_WrCmd(0x10); //0x10+0~16表示将128列分成16组其地址所在第几组
+//        for(int y=0;y<OV7620_H-1;y++){
+//            uint8_t rev = bin8_rev(gpHREF[y][x+1]);
+//            LED_WrDat(rev);        //输出反转二进制
+//        }
+//    }
+
+    for(int y=0;y<OV7620_H-1;y++)
+        for(int x=0;x<OV7620_W/8;x++)
+            for(int i=0; i<8; i++)
+                gIMG[x*8+i][y] = (gpHREF[y][x+1]>>(7-i))%2;
+
+    for(int y=0;y<(OV7620_H)/8;y++){
+        LED_WrCmd(0xb0 + y); //0xb0+0~7表示页0~7
         LED_WrCmd(0x00); //0x00+0~16表示将128列分成16组其地址在某组中的第几列
         LED_WrCmd(0x10); //0x10+0~16表示将128列分成16组其地址所在第几组
-        for(int y=0;y<OV7620_H-1;y++){
-            uint8_t rev = bin8_rev(gpHREF[y][x+1]);
-            LED_WrDat(rev);        //输出反转二进制
+        for(int x=0;x<OV7620_W;x++){
+            uint8_t data = 0;
+            for(int i=0;i<8 && y+i<OV7620_H ;i++)
+                data += gIMG[x][y*8+i]<<(i);
+            LED_WrDat(data);
         }
     }
 }
@@ -221,12 +249,12 @@ static void UserApp(uint32_t vcount)
 //串口接收中断
 void UART_RX_ISR(uint16_t byteRec){
     for(int y=0;y<OV7620_H-1;y++){
-        for(int x=0;x<8;x++){
-            printBin(gpHREF[y][x+1]);
+        for(int x=0;x<OV7620_W;x++){
+            printf("%d",gIMG[x][y]);
         }
     printf("\r\n");
     }
-    printf("\r\n\r\n");
+    printf("\r\n");
 }
 
 int main(void)

@@ -40,7 +40,6 @@
  FTM2_CH0_PB18   
  FTM2_CH1_PB19   
 */
-int pin = FTM0_CH3_PA06;
 
 void turn(int angel){
     int pwm = (angel/180.0 + 1) * 500;

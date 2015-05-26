@@ -54,7 +54,7 @@ uint8_t * gpHREF[OV7620_H+1];
 #define BOARD_OV7620_DATA_OFFSET    (0)
 
 static void UserApp(uint32_t vcount);
-//定义一帧结束后用户函数
+//定义一帧结束后的用户函数
 
 /* 状态机定义 */
 typedef enum
@@ -121,7 +121,7 @@ void OV_ISR(uint32_t index)
         }
         GPIO_ITDMAConfig(BOARD_OV7620_VSYNC_PORT, BOARD_OV7620_VSYNC_PIN, kGPIO_IT_FallingEdge, true);
         GPIO_ITDMAConfig(BOARD_OV7620_HREF_PORT, BOARD_OV7620_HREF_PIN, kGPIO_IT_FallingEdge, true);
-        PORTE->ISFR = 0xFFFFFFFF;
+        PORTE->ISFR = 0xFFFFFFFF;   //这里可以改PORTE
         h_counter = 0;
         return;
     }
@@ -168,12 +168,12 @@ void initCamera(){
 
     //DMA配置
     DMA_InitStruct1.chl = HW_DMA_CH2;
-    DMA_InitStruct1.chlTriggerSource = PORTE_DMAREQ;
+    DMA_InitStruct1.chlTriggerSource = PORTE_DMAREQ;    //这里可以改PORTE
     DMA_InitStruct1.triggerSourceMode = kDMA_TriggerSource_Normal;
     DMA_InitStruct1.minorLoopByteCnt = 1;
     DMA_InitStruct1.majorLoopCnt = ((OV7620_W/8) +1);
 
-    DMA_InitStruct1.sAddr = (uint32_t)&PTE->PDIR + BOARD_OV7620_DATA_OFFSET/8;
+    DMA_InitStruct1.sAddr = (uint32_t)&PTE->PDIR + BOARD_OV7620_DATA_OFFSET/8;  //这里可以改PTE
     DMA_InitStruct1.sLastAddrAdj = 0;
     DMA_InitStruct1.sAddrOffset = 0;
     DMA_InitStruct1.sDataWidth = kDMA_DataWidthBit_8;
@@ -189,31 +189,16 @@ void initCamera(){
     DMA_Init(&DMA_InitStruct1);
 }
 
-uint8_t bin8_rev(uint8_t data)
-{
-    data=((data&0xf0)>>4) | ((data&0x0f)<<4);
-    data=((data&0xCC)>>2) | ((data&0x33)<<2);
-    data=((data&0xAA)>>1) | ((data&0x55)<<1);
-    return data;
-}
-
 void printBin(uint8_t data){
     int i;
     for(i=7;i>=0;i--){
+        //高位在前,低位在后
         printf("%c", (data>>i)%2>0?'*':'.');
     }
 }
 
-
-// 图像内存池
-//uint8_t gCCD_RAM[(OV7620_H)*((OV7620_W/8)+1)];   //使用内部RAM
-
-/* 行指针 */
-//uint8_t * gpHREF[OV7620_H+1];
-
 // IMG
 uint8_t gIMG[OV7620_W][OV7620_H];   //使用内部RAM
-
 
 /* 接收完成一场后 用户处理函数 */
 static void UserApp(uint32_t vcount)
@@ -240,11 +225,12 @@ static void UserApp(uint32_t vcount)
 
 //串口接收中断
 void UART_RX_ISR(uint16_t byteRec){
+    //打印整个图像
     for(int y=0;y<OV7620_H-1;y++){
         for(int x=0;x<OV7620_W;x++){
             printf("%d",gIMG[x][y]);
         }
-    printf("\r\n");
+        printf("\r\n");
     }
     printf("\r\n");
 }

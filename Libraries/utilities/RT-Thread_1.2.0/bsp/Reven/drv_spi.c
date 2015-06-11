@@ -5,7 +5,7 @@
 #include <rtdevice.h>
 #include <drivers/spi.h>
 
-#include "drv_spi.h"
+#include "rtt_drv.h"
 static struct rt_spi_bus kinetis_spi;
 
 #define  RTT_SPI_DRIVER_DEBUG  0

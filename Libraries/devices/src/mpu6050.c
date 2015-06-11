@@ -7,11 +7,15 @@
   * @brief   www.beyondcore.net   http://upcmcu.taobao.com 
   ******************************************************************************
   */
+  
+#include <stdint.h>
+#include <stdbool.h>
+#include <string.h>
+
 #include "mpu6050.h"
 #include "i2c.h"
 
-
-#define MPU6050_DEBUG		0
+#define MPU6050_DEBUG		1
 #if ( MPU6050_DEBUG == 1 )
 #define MPU6050_TRACE	printf
 #else
@@ -165,21 +169,35 @@ It's difficient from the MPU-6000 */
 #define MPU_ACCEL_CONFIG_AFS_SEL_DATA(x)	(((uint8_t)(((uint8_t)(x))<<MPU_ACCEL_CONFIG_AFS_SEL_SHIFT))&MPU_ACCEL_CONFIG_AFS_SEL_MASK)	
 /***********Device base address*************/
 
+static const uint8_t mpu_addr[] = {0x68, 0x69};
+
 struct mpu_device 
 {
     uint8_t     addr;
     uint32_t    instance;
+    struct mpu_config   user_config;
     void        *user_data;
+    float               aRes;           /* scale resolutions per LSB for the sensors */
+    float               gRes;
+    float               mRes;
 };
 
 static struct mpu_device mpu_dev;
 
-static const uint8_t mpu_addr[] = {0x68, 0x69};
 
 static int write_reg(uint8_t addr, uint8_t val)
 {
     return I2C_WriteSingleRegister(mpu_dev.instance, mpu_dev.addr, addr, val);
 }
+
+
+static uint8_t read_reg(uint8_t addr)
+{
+    uint8_t val;
+    I2C_ReadSingleRegister(mpu_dev.instance, mpu_dev.addr, addr, &val);
+    return val;
+}
+
 
 int mpu6050_init(uint32_t instance)
 {
@@ -201,13 +219,13 @@ int mpu6050_init(uint32_t instance)
                 write_reg(SMPLRT_DIV, 0x0A);
                 write_reg(CONFIG, 0x00);
                 write_reg(AUX_VDDIO,0x80);
-                write_reg(GYRO_CONFIG, 0x18);
+                write_reg(GYRO_CONFIG, 0x08);
                 write_reg(ACCEL_CONFIG, 0x00);
                 write_reg(I2C_MST_CTRL, 0x00);
                 write_reg(INT_PIN_CFG, 0x02);
                 
                 /* init sequence */
-                MPU6050_TRACE("mpu6050 found!addr:0x%X\r\n", device.chip_addr);
+                MPU6050_TRACE("mpu6050 found!addr:0x%X\r\n", mpu_dev.addr);
                 return 0;     
             }
         }
@@ -216,32 +234,84 @@ int mpu6050_init(uint32_t instance)
 }
 
 
+int mpu6050_config(struct mpu_config *config)
+{
+    uint8_t val;
+    memcpy(&mpu_dev.user_config, config, sizeof(struct mpu_config));
 
+    /* accel */
+    val = read_reg(ACCEL_CONFIG);
+    val &= ~MPU_ACCEL_CONFIG_AFS_SEL_MASK;
+    val |= MPU_ACCEL_CONFIG_AFS_SEL_DATA(config->afs);
+    write_reg(ACCEL_CONFIG, val);
+    switch(config->afs)
+    {
+        case AFS_2G:
+            mpu_dev.aRes = 2.0/32768.0;
+            break;
+        case AFS_4G:
+            mpu_dev.aRes = 4.0/32768.0;
+            break;
+        case AFS_8G:
+            mpu_dev.aRes = 8.0/32768.0;
+            break;
+        case AFS_16G:
+            mpu_dev.aRes = 16.0/32768.0;
+            break;        
+    }
+    
+    /* gyro */
+    val = read_reg(GYRO_CONFIG);
+    val &= ~MPU_GYRO_CONFIG_FS_SEL_MASK;
+    val |= MPU_GYRO_CONFIG_FS_SEL_DATA(config->gfs);
+    write_reg(GYRO_CONFIG, val);
+    switch(config->gfs)
+    {
+        case GFS_250DPS:
+            mpu_dev.gRes = 250.0/32768.0;
+            break;      
+        case GFS_500DPS:
+            mpu_dev.gRes = 500.0/32768.0;
+            break;  
+        case GFS_1000DPS:
+            mpu_dev.gRes = 1000.0/32768.0;
+            break; 
+        case GFS_2000DPS:
+            mpu_dev.gRes = 2000.0/32768.0;
+            break;  
+    }
+    
+    MPU6050_TRACE("aRes:%f  gRes:%f  mRes:%f  \r\n", mpu_dev.aRes, mpu_dev.gRes, mpu_dev.mRes);
+    return 0;
+}
 
-int mpu6050_read_accel(int16_t* x, int16_t* y, int16_t* z)
+int mpu6050_read_accel(int16_t* adata)
 {
     uint8_t err;
     uint8_t buf[6];
     
     err = I2C_BurstRead(mpu_dev.instance, mpu_dev.addr, ACCEL_XOUT_H, 1, buf, 6);
     
-    *x=(int16_t)(((uint16_t)buf[0]<<8)+buf[1]); 	    
-    *y=(int16_t)(((uint16_t)buf[2]<<8)+buf[3]); 	    
-    *z=(int16_t)(((uint16_t)buf[4]<<8)+buf[5]); 
+    adata[0] = (int16_t)(((uint16_t)buf[0]<<8)+buf[1]); 	    
+    adata[1] = (int16_t)(((uint16_t)buf[2]<<8)+buf[3]); 	    
+    adata[2] = (int16_t)(((uint16_t)buf[4]<<8)+buf[5]); 
+    
+    
     return err;    
 }
 
 //!< read gyro data
-int mpu6050_read_gyro(int16_t* x, int16_t* y, int16_t* z)
+int mpu6050_read_gyro(int16_t *gdata)
 {
     uint8_t err;
     uint8_t buf[6];
     
     err = I2C_BurstRead(mpu_dev.instance, mpu_dev.addr, GYRO_XOUT_H, 1, buf, 6);
     
-    *x=(int16_t)(((uint16_t)buf[0]<<8)+buf[1]); 	    
-    *y=(int16_t)(((uint16_t)buf[2]<<8)+buf[3]); 	    
-    *z=(int16_t)(((uint16_t)buf[4]<<8)+buf[5]); 
+    gdata[0] = (int16_t)(((uint16_t)buf[0]<<8)+buf[1]); 	    
+    gdata[1] = (int16_t)(((uint16_t)buf[2]<<8)+buf[3]); 	    
+    gdata[2] = (int16_t)(((uint16_t)buf[4]<<8)+buf[5]);
+    
     return err;    
 }
 

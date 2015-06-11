@@ -29,29 +29,40 @@ enum gyro_scale
     GFS_2000DPS
 };
 
-
+enum mag_scale
+{
+    MFS_14BITS,
+    MFS_16BITS,
+};
 
 struct mpu_config
 {
     enum accel_scale        afs;
     enum gyro_scale         gfs;
+    enum mag_scale          mfs;
     bool                    aenable_self_test;
     bool                    genable_self_test;
     bool                    gbypass_blpf;
 };
 
 
-
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(x)	(sizeof(x) / sizeof((x)[0]))
 #endif
 
+
+
 //!< API function
 int mpu9250_init(uint32_t instance);
-int mpu9250_read_accel_raw(int16_t* x, int16_t* y, int16_t* z);
-int mpu9250_read_gyro_raw(int16_t* x, int16_t* y, int16_t* z);
-int mpu9250_read_mag_raw(int16_t* x, int16_t* y, int16_t* z);
+int mpu9250_read_accel_raw(int16_t *adata);
+int mpu9250_read_gyro_raw(int16_t *gdata);
+int mpu9250_read_mag_raw(int16_t *mdata);
 int mpu9250_config(struct mpu_config *config);
 int mpu9250_read_temp_raw(int16_t *val);
+void mpu9250_reset(void);
+float mpu9250_get_ares(void);
+float mpu9250_get_gres(void);
+float mpu9250_get_mres(void);
+int mpu9250_set_gyro_bias(int16_t* bias);
 
 #endif

@@ -9,7 +9,7 @@ static  rt_mutex_t mutex;
 
 static rt_err_t rt_sd_init (rt_device_t dev)
 {
-    mutex = rt_mutex_create("sd_mutex", RT_IPC_FLAG_FIFO);
+    mutex = rt_mutex_create("_mu", RT_IPC_FLAG_FIFO);
     return RT_EOK;
 }
 

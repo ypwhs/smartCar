@@ -39,13 +39,7 @@ OS_TID            USBD_RTX_CoreTask;           /* USB Core Task ID */
 #endif
 
 
-__asm void $$USBD$$version (void) {
-   /* Export a version number symbol for a version control. */
 
-                EXPORT  __RL_USBD_VER
-
-__RL_USBD_VER   EQU     0x470
-}
 
 
 /*
@@ -278,7 +272,7 @@ BOOL USBD_ReqSetClrFeature (U32 sc) {
  *    Return Value:    TRUE - Success, FALSE - Error
  */
 
-__inline BOOL USBD_ReqSetAddress (void) {
+ BOOL USBD_ReqSetAddress (void) {
 
   switch (USBD_SetupPacket.bmRequestType.Recipient) {
     case REQUEST_TO_DEVICE:

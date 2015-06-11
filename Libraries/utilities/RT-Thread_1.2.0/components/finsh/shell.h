@@ -50,7 +50,7 @@
 #ifndef FINSH_THREAD_STACK_SIZE
 #define FINSH_THREAD_STACK_SIZE 2048
 #endif
-#define FINSH_CMD_SIZE		255
+#define FINSH_CMD_SIZE		80
 
 #define FINSH_OPTION_ECHO	0x01
 #if defined(FINSH_USING_MSH) || (defined(RT_USING_DFS) && defined(DFS_USING_WORKDIR))

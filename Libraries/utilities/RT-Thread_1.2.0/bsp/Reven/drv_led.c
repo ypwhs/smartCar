@@ -1,7 +1,7 @@
 #include <rthw.h>
 #include <rtthread.h>
 #include <stdint.h>
-#include "drv_led.h"
+#include "rtt_drv.h"
 #include "board.h"
 #include "chlib_k.h"
 
@@ -86,6 +86,7 @@ static int led(int argc, char** argv)
 		return -1;
 	}
     rt_led_control(dev, val, &led);
+    return 0;
 }
 
 MSH_CMD_EXPORT(led, led. eg:led 1 1)

@@ -4,12 +4,15 @@
 #include "dma.h"
 #include "ftm.h"
 #include "uart.h"
+#include "lptmr.h"
 
 void turn(int angel){
-    int pwm = (int)((angel/180.0 + 1) * 500);  //90度是1.5ms，0度是1ms，180度是2ms
-    FTM_PWM_ChangeDuty(HW_FTM3, HW_FTM_CH4, pwm);
+    int pwm = (int)((angel/90.0 + 1.5) * 500);  //90度是1.5ms，0度是1ms，180度是2ms
+    printf("SET:%d\r\n", pwm);
+    FTM_PWM_ChangeDuty(HW_FTM0, HW_FTM_CH5, pwm);
 }
-#define DRIVER_PWM_WIDTH 10000
+
+#define DRIVER_PWM_WIDTH 100
 void initDriver(){
     printf("initPWM\r\n");
 
@@ -29,7 +32,7 @@ void initDriver(){
     PCout(0)=1;
     //使能INH
 
-    FTM_PWM_QuickInit(FTM3_CH4_PC08, kPWM_EdgeAligned, 50);     //设置频率50HZ，20ms脉宽，边沿对齐模式
+    FTM_PWM_QuickInit(FTM0_CH5_PD05, kPWM_EdgeAligned, DRIVER_PWM_WIDTH);     //设置FTM，边沿对齐模式
     turn(90);
     //初始化舵机
 
@@ -82,10 +85,13 @@ void UART_RX_ISR(uint16_t byteRec){
         setRightSpeed(-spd);
         break;
     case 'a':
-        turn(60);
+        turn(0);
         break;
     case 'd':
-        turn(120);
+        turn(180);
+        break;
+    case 'x':
+        turn(90);
         break;
     default:
         setLeftSpeed(0);
@@ -95,14 +101,7 @@ void UART_RX_ISR(uint16_t byteRec){
     printf("%c", byteRec);
 }
 
-int main(void)
-{
-
-    DelayInit();
-    /* 打印串口及小灯 */
-
-    GPIO_QuickInit(HW_GPIOC, 3, kGPIO_Mode_OPP);
-
+void initUART(){
     UART_QuickInit(UART0_RX_PB16_TX_PB17, 115200);
     /*
     UART0_RX_PB16_TX_PB17
@@ -114,12 +113,28 @@ int main(void)
 
     /* 开启UART Rx中断 */
     UART_ITDMAConfig(HW_UART0, kUART_IT_Rx, true);
+}
 
-    //initDriver();
-    FTM_PWM_QuickInit(FTM3_CH4_PC08, kPWM_EdgeAligned, 50);
+int main(void)
+{
+
+    DelayInit();
+    /* 打印串口及小灯 */
+
+    GPIO_QuickInit(HW_GPIOD, 10, kGPIO_Mode_OPP);
+
+    initUART();
+    initDriver();
+
+    /* 快速初始化 LPTMR模块用作脉冲计数功能 */
+    LPTMR_PC_QuickInit(LPTMR_ALT2_PC05); /* 脉冲计数 */
 
     while(1)
     {
-
+        uint32_t value;
+        value = LPTMR_PC_ReadCounter(); //获得LPTMR模块的计数值
+        printf("LPTMR:%d\r\n", value);
+        PDout(10)=!PDout(10);
+        DelayMs(100);
     }
 }

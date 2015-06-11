@@ -48,7 +48,7 @@ typedef struct
 }CAN_InitTypeDef;
 
 
-//!< CAN QuickInit macro                            
+//!< CAN QuickInit macro
 #define CAN1_TX_PE24_RX_PE25   (0xB0A1U)  //CAN1模块 发送引脚为PTE24 接收引脚为PTE25
 #define CAN0_TX_PA12_RX_PA13   (0x9880U)  //CAN0模块 发送引脚为PTA12 接收引脚为PTA13
 #define CAN0_TX_PB18_RX_PB19   (0xA488U)  //CAN0模块 发送引脚为PTB18 接收引脚为PTB19
@@ -78,5 +78,8 @@ void CAN_SetReceiveMB(uint32_t instance, uint32_t mb, uint32_t id);
 void CAN_CallbackInstall(uint32_t instance, CAN_CallBackType AppCBFun);
 void CAN_Init(CAN_InitTypeDef* CAN_InitStruct);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

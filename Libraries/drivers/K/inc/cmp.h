@@ -30,5 +30,8 @@ typedef struct
 void CMP_Init(CMP_InitTypeDef* CMP_InitStruct);
 void CMP_CallbackInstall(uint32_t instance, CMP_CallBackType AppCBFun);
 
-     
+#ifdef __cplusplus
+}
+#endif
+
 #endif

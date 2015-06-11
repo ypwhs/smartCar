@@ -234,6 +234,7 @@ void DMA_ITConfig(uint8_t chl, DMA_ITConfig_Type config, bool status)
     }
 }
 
+
 /**
  * @brief  注册中断回调函数
  * @param  chl: DMA通道号
@@ -250,6 +251,11 @@ void DMA_CallbackInstall(uint8_t chl, DMA_CallBackType AppCBFun)
     {
         DMA_CallBackTable[chl] = AppCBFun;
     }
+}
+
+void DMA_CancelTransfer(uint8_t chl)
+{
+    DMA0->DMA[chl].DSR_BCR |= DMA_DSR_BCR_DONE_MASK;
 }
 
 void DMA0_IRQHandler(void)

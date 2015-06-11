@@ -1,13 +1,3 @@
-/**
-  ******************************************************************************
-  * @file    common.h
-  * @author  YANDLD
-  * @version V2.5
-  * @date    2013.12.25
-  * @brief   www.beyondcore.net   http://upcmcu.taobao.com 
-  * @note    此文件为内部文件，用户无需调用和修改  
-  ******************************************************************************
-  */
 #ifndef __CH_LIB_KL_COMMON_H__
 #define __CH_LIB_KL_COMMON_H__
 
@@ -20,6 +10,10 @@
 
 #ifdef MKL25Z4
 #include "MKL25Z4.h"
+#elif MKL27Z4
+#include "MKL27Z4.h"
+#elif MKL28Z7
+#include "MKL28Z7.h"
 #elif  MKL26Z4
 #include "MKL26Z4.h"
 #elif  MKL03Z4
@@ -46,7 +40,7 @@
 #define FW_VERSION                ((CHK_VERSION * 10000) + \
                                   (CHK_SUBVERSION * 100) + CHK_REVISION)
 
-//参数检测器
+
 #if defined(LIB_DEBUG)
 
 /**
@@ -98,7 +92,7 @@ typedef struct
     uint32_t reserved:8;
 }QuickInit_Type;
 
-/* 时钟源定义 */
+/* clock */
 typedef enum
 {
     kCoreClock,

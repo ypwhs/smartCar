@@ -526,13 +526,14 @@ void finsh_thread_entry(void* parameter)
             else
             {
                 shell->line[shell->line_position] = ch;
-                rt_kprintf("%c", ch);
+                if (shell->echo_mode)
+                    rt_kprintf("%c", ch);
             }
 
             ch = 0;
             shell->line_position ++;
             shell->line_curpos++;
-			if (shell->line_position >= FINSH_CMD_SIZE) 
+			if (shell->line_position >= 80) 
 			{
 				/* clear command line */
 				shell->line_position = 0;

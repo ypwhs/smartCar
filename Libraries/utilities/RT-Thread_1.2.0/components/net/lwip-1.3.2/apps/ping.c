@@ -174,7 +174,30 @@ rt_err_t ping(char* target, rt_uint32_t time, rt_size_t size)
 
     return RT_EOK;
 }
+
 #ifdef RT_USING_FINSH
 #include <finsh.h>
-FINSH_FUNCTION_EXPORT(ping, ping("192.168.1.1", 10, 10));
+//FINSH_FUNCTION_EXPORT(ping, ping("192.168.1.1", 10, 10));
+
+int cmd_ping(int argc, char** argv)
+{
+    rt_err_t err;
+    char *host = rt_malloc(rt_strlen(argv[1]));
+    err = ping(argv[1], 4, 100);
+    
+    if(err)
+        rt_kprintf("ping cmd failed:%d\r\n", err);
+    
+    rt_free(host);
+    
+    return err;
+}
+    
+FINSH_FUNCTION_EXPORT_ALIAS(cmd_ping, __cmd_ping, ping 192.168.1.1);
+
 #endif
+
+
+
+
+

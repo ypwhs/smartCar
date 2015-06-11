@@ -461,7 +461,7 @@ u32_t sys_arch_mbox_fetch(sys_mbox_t *mbox, void **msg, u32_t timeout)
     u32_t tick;
 
     RT_DEBUG_NOT_IN_INTERRUPT;
-
+    
     /* get the begin tick */
     tick = rt_tick_get();
 

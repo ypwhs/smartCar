@@ -135,6 +135,7 @@ void DMA_EnableRequest(uint8_t chl);
 void DMA_DisableRequest(uint8_t chl);
 void DMA_EnableAutoDisableRequest(uint8_t chl , bool flag);
 void DMA_EnableCycleSteal(uint8_t chl, bool flag);
+void DMA_CancelTransfer(uint8_t chl);
 /* IT funtions */
 void DMA_ITConfig(uint8_t chl, DMA_ITConfig_Type config, bool status);
 void DMA_CallbackInstall(uint8_t chl, DMA_CallBackType AppCBFun);

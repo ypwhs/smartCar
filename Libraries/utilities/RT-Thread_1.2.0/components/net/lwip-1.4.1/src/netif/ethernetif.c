@@ -318,7 +318,7 @@ static void eth_tx_thread_entry(void* parameter)
                 /* call driver's interface */
                 if (enetif->eth_tx(&(enetif->parent), msg->buf) != RT_EOK)
                 {
-                    rt_kprintf("transmit eth packet failed\n");
+                    //rt_kprintf("transmit eth packet failed\n");
                 }
             }
 

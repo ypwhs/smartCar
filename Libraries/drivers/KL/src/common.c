@@ -1,15 +1,5 @@
-/**
-  ******************************************************************************
-  * @file    common.c
-  * @author  YANDLD
-  * @version V2.5
-  * @date    2013.12.25
-  * @brief   www.beyondcore.net   http://upcmcu.taobao.com 
-  * @note    此文件为内部文件，用户无需调用和修改  
-  ******************************************************************************
-  */
-#include "common.h"
 #include <string.h>
+#include "common.h"
 #include "systick.h"
 
 
@@ -65,24 +55,13 @@ int32_t CLOCK_GetClockFrequency(CLOCK_Source_Type clockName, uint32_t* Frequenct
     return 0;
 }
 
- /**
- * @brief  编码快速初始化结构 用户不需调用
- *
- * @param  type: 快速初始化结构体指针
- * @retval       32位快速初始化编码
- */
+
 uint32_t QuickInitEncode(QuickInit_Type * type)
 {
     return *(uint32_t*)type;
 }
 
- /**
- * @brief  解码快速初始化结构 用户不需调用
- *
- * @param  map: 32位快速初始化编码
- * @param  type: 快速初始化结构指针
- * @retval None
- */
+
 void QuickInitDecode(uint32_t map, QuickInit_Type * type)
 {
     QuickInit_Type * pMap = (QuickInit_Type*)&(map);
@@ -106,14 +85,13 @@ void DelayInit(void)
 }
 
 /**
- * @brief 抽象毫秒级的延时设置函数
+ * @brief 毫秒级的延时设置函数
  * @code
  *      // 实现500ms的延时功能
  *        DelayMs(500);
  * @endcode
  * @param  ms :需要延时的时间，单位毫秒
  * @retval None
- * @note  首先需要完成延时初始化配置
  */
 
 #pragma weak DelayMs
@@ -123,14 +101,13 @@ void DelayMs(uint32_t ms)
 }
 
 /**
- * @brief 抽象微秒级的延时设置函数
+ * @brief 微秒级的延时设置函数
  * @code
  *      // 实现500us的延时功能
  *        DelayUs(500);
  * @endcode
  * @param  us :需要延时的时间，单位微秒
  * @retval None
- * @note  首先需要完成延时初始化配置
  */
 #pragma weak DelayUs
 void DelayUs(uint32_t us)
@@ -143,7 +120,7 @@ void DelayUs(uint32_t us)
 #if (defined(LIB_DEBUG))
 void assert_failed(char * file, uint32_t line)
 {
-	//断言失败检测
+	/* failed */
 	while(1);
 }
 #endif

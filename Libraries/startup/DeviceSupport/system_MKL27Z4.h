@@ -109,7 +109,7 @@ extern "C" {
 #define DISABLE_WDOG    1
 
 #ifndef CLOCK_SETUP
-  #define CLOCK_SETUP   0
+  #define CLOCK_SETUP   1
 #endif
 /* Predefined clock setups
    0 ... Multipurpose Clock Generator Lite (MCG_Lite) in Low-frequency Internal Reference Clock 8 MHz (LIRC 8 MHz) mode

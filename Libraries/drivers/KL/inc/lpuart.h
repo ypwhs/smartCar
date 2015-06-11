@@ -1,14 +1,5 @@
-/**
-  ******************************************************************************
-  * @file    uart.h
-  * @author  YANDLD
-  * @version V2.5
-  * @date    2014.3.25
-  * @brief   www.beyondcore.net   http://upcmcu.taobao.com 
-  ******************************************************************************
-  */
-#ifndef __CH_LIB_UART_H__
-#define __CH_LIB_UART_H__
+#ifndef __CH_LIB_LPUART_H__
+#define __CH_LIB_LPUART_H__
 
 #ifdef __cplusplus
  extern "C" {
@@ -16,34 +7,37 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-	 
-#ifdef UART_USE_STDIO
-#define UART_printf(fmt,args...)    printf (fmt ,##args)
-#endif
      
-     
-/*!< LPUART 硬件模块号 */
-#define HW_LPUART0  (0x00U)
+#define     LPUART0_RX_E21_TX_E20   (0x0000A920U)
+#define     LPUART0_RX_B16_TX_B17   (0x0000A0C8U)
+#define     LPUART0_RX_A01_TX_A02   (0x00008280U)
+#define     LPUART1_RX_A18_TX_A19   (0x0000A4C1U)
+#define     LPUART1_RX_C03_TX_C04   (0x000086D1U)
+#define     LPUART0_RX_D06_TX_D07   (0x00008CD8U)
 
-/*!< parity 选择 */
+/*!< LPUART instance */
+#define HW_LPUART0  (0x00U)
+#define HW_LPUART1  (0x01U)
+     
+/*!< parity  */
 typedef enum
 {
-    kUART_ParityDisabled = 0x0,  // 校验位禁止
-    kUART_ParityEven     = 0x2,  // 1位 奇校验 
-    kUART_ParityOdd      = 0x3,  // 1位 偶校验 
+    kUART_ParityDisabled = 0x0,
+    kUART_ParityEven     = 0x2,
+    kUART_ParityOdd      = 0x3,
 } UART_ParityMode_Type;
 
-/*!< 每帧数据位个数 */
+/*!< bit count */
 typedef enum 
 {
-    kUART_8BitsPerChar  = 0,   // 8-bit 数据 不包括校验位 
-    kUART_9BitsPerChar  = 1,   // 9-bit 数据 不包括校验位 
+    kUART_8BitsPerChar  = 0,
+    kUART_9BitsPerChar  = 1,
 } UART_BitPerChar_Type;
 
-/*!< UART 回调函数声明 */
+
 typedef void (*LPUART_CallBackTxType)(void* pram);
 
-/*!< 中断及DMA配置 */
+/*!< Interrupts and DMA */
 typedef enum
 {
     kUART_IT_Tx,                // 开启每发送一帧传输完成中断 
@@ -52,24 +46,21 @@ typedef enum
     kUART_DMA_Rx,               // 开启每接收一帧传输完成触发DMA 
 }UART_ITDMAConfig_Type;
 
-/*!< UART初始化结构 */
+
 typedef struct
 {
-    uint32_t                srcClock;       // 时钟源频率
-    uint8_t                 instance;       // UART 模块号 HW_UART0~HW_UART5
-    uint32_t                baudrate;       // UART 波特率 
-    UART_ParityMode_Type    parityMode;     // UART 校验位 
-    UART_BitPerChar_Type    bitPerChar;     // UART 每一帧含多少位数据 
-}UART_InitTypeDef;
+    uint32_t                srcClock;
+    uint8_t                 instance;
+    uint32_t                baudrate;
+    UART_ParityMode_Type    parityMode;
+    UART_BitPerChar_Type    bitPerChar;
+}LPUART_InitTypeDef;
      
 /*!< API functions */
-
-uint8_t UART_QuickInit(uint32_t MAP, uint32_t baudrate);
-void UART_Init(UART_InitTypeDef * UART_InitStruct);
-int UART_printf(const char *format,...);
-uint8_t UART_ReadByte(uint32_t instance, uint16_t *ch);
-void UART_WriteByte(uint32_t instance, char ch);
-void UART_SelectDebugInstance(uint32_t instance);
+uint32_t LPUART_QuickInit(uint32_t MAP, uint32_t baudrate);
+void LPUART_Init(LPUART_InitTypeDef * UART_InitStruct);
+void LPUART_WriteByte(uint32_t instance, char ch);
+uint8_t UART_ReadByte(uint32_t instance, uint8_t *ch);
 
 
 #ifdef __cplusplus

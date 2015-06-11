@@ -1,3 +1,13 @@
+/**
+  ******************************************************************************
+  * @file    imu.c
+  * @author  YANDLD
+  * @version V2.5
+  * @date    2015.3.26
+  * @brief   www.beyondcore.net   http://upcmcu.taobao.com 
+  * @note    
+  ******************************************************************************
+  */
 #include "imu.h"
 
 
@@ -6,39 +16,16 @@
  * Defination
  ******************************************************************************/
 #define PI             3.1415926f
-#define Kp             20.0f     /* proportional gain governs rate of convergence to accelerometer/magnetometer */
-#define Ki             0.001f     /* integral gain governs rate of convergence of gyroscope biases */
-#define halfT          0.002f
-#define Gyro_G         0.0610351f
-#define Gyro_Gr        0.0010653f
+#define Kp             3.0f     /* proportional gain governs rate of convergence to accelerometer/magnetometer */
+#define Ki             0.002f     /* integral gain governs rate of convergence of gyroscope biases */
+
+
+#define Gyro_Gr        (0.00052653)
    
-
-typedef struct 
-{
-    double ax;
-    double ay;
-    double az;
-    double gx;
-    double gy;
-    double gz;
-    double mx;
-    double my;
-    double mz;
-}imu_float_data_t;
-
-
-static imu_io_install_t * gpIOInstallStruct;   /* install struct	*/
- /*******************************************************************************
- * Code
- ******************************************************************************/
-
-uint32_t imu_io_install(imu_io_install_t * IOInstallStruct)
-{
-    gpIOInstallStruct = IOInstallStruct;
-    return 0;
-}
+float halfT = 0.002f;
 
 /* sliding filter */
+#if 0
 static uint32_t imu_sliding_filter(imu_raw_data_t raw_data, imu_raw_data_t * filter_data)
 {
     int32_t sum_accel_x = 0;
@@ -95,70 +82,75 @@ static uint32_t imu_sliding_filter(imu_raw_data_t raw_data, imu_raw_data_t * fil
     filter_data->mz = raw_data.mz; 
     return 0;
 }
+#endif
 
 
-//!< format data into float value
-static uint32_t imu_format_data(imu_raw_data_t * raw_data, imu_float_data_t * float_data)
+
+static inline float invSqrt(float x) 
 {
-    float_data->ax = (double)raw_data->ax;
-    float_data->ay = (double)raw_data->ay;
-    float_data->az = (double)raw_data->az;
-    
-    float_data->gx = (double)raw_data->gx;
-    float_data->gy = (double)raw_data->gy;
-    float_data->gz = (double)raw_data->gz;
-    
-    float_data->mx = (double)raw_data->mx;
-    float_data->my = (double)raw_data->my;
-    float_data->mz = (double)raw_data->mz;
-    return 0;
+	float halfx = 0.5f * x;
+	float y = x;
+	long i = *(long*)&y;
+	i = 0x5f3759df - (i>>1);
+	y = *(float*)&i;
+	y = y * (1.5f - (halfx * y * y));
+	return y;
 }
 
-//!< the mx my mz order are related to PCB layout!!
-static void updateAHRS(double gx,double gy,double gz,double ax,double ay,double az,double mx,double my,double mz, imu_float_euler_angle_t * angle)
-{
-    double norm = 0;
-    double hx = 0, hy = 0, hz = 0, bx = 0, bz = 0;			
-    double vx = 0, vy = 0, vz = 0, wx = 0, wy = 0, wz = 0;		
-    double ex = 0, ey = 0, ez = 0;
-    static double q0 = 1; 
-    static double q1 = 0; 
-    static double q2 = 0;
-    static double q3 = 0;
-    static double exInt = 0, eyInt = 0, ezInt = 0;
 
-    double q0q0 = q0*q0;
-    double q0q1 = q0*q1;
-    double q0q2 = q0*q2;
-    double q0q3 = q0*q3;
-    double q1q1 = q1*q1;
-    double q1q2 = q1*q2;
-    double q1q3 = q1*q3;
-    double q2q2 = q2*q2;
-    double q2q3 = q2*q3;
-    double q3q3 = q3*q3;
+//!< the mx my mz order are related to PCB layout!!
+#ifdef URANUS2
+static inline void updateAHRS(float gx,float gy,float gz,float ax,float ay,float az,float my,float mx,float mz, attitude_t * angle)
+#elif URANUS
+static inline void updateAHRS(float gx,float gy,float gz,float ax,float ay,float az,float mx,float mz,float my, attitude_t * angle)
+#endif
+{
+    #ifdef URANUS2
+    mz = -mz;
+    #endif
+    float norm = 0;
+    float hx = 0, hy = 0, hz = 0, bx = 0, bz = 0;			
+    float vx = 0, vy = 0, vz = 0, wx = 0, wy = 0, wz = 0;		
+    float ex = 0, ey = 0, ez = 0;
+    static float q0 = 1; 
+    static float q1 = 0; 
+    static float q2 = 0;
+    static float q3 = 0;
+    static float exInt = 0, eyInt = 0, ezInt = 0;
+
+    float q0q0 = q0*q0;
+    float q0q1 = q0*q1;
+    float q0q2 = q0*q2;
+    float q0q3 = q0*q3;
+    float q1q1 = q1*q1;
+    float q1q2 = q1*q2;
+    float q1q3 = q1*q3;
+    float q2q2 = q2*q2;
+    float q2q3 = q2*q3;
+    float q3q3 = q3*q3;
 
     if(ax*ay*az==0)
     {
         return;    
     }
 		
-    norm = sqrt(ax*ax + ay*ay + az*az);
-    ax = ax / norm;
-    ay = ay / norm;
-    az = az / norm;
+    
+    norm = invSqrt(ax*ax + ay*ay + az*az);
+    ax = ax * norm;
+    ay = ay * norm;
+    az = az * norm;
 
-    norm = sqrt(mx*mx + my*my + mz*mz);
-    mx = mx / norm;
-    my = my / norm;
-    mz = mz / norm;
+    norm = invSqrt(mx*mx + my*my + mz*mz);
+    mx = mx * norm;
+    my = my * norm;
+    mz = mz * norm;
 	
     /* compute reference direction of flux */
     hx = 2*mx*(0.5f - q2q2 - q3q3) + 2*my*(q1q2 - q0q3) + 2*mz*(q1q3 + q0q2);
     hy = 2*mx*(q1q2 + q0q3) + 2*my*(0.5f - q1q1 - q3q3) + 2*mz*(q2q3 - q0q1);
     hz = 2*mx*(q1q3 - q0q2) + 2*my*(q2q3 + q0q1) + 2*mz*(0.5f - q1q1 - q2q2);         
 
-    bx = sqrt((hx*hx) + (hy*hy));
+    bx = 1/invSqrt((hx*hx) + (hy*hy));
     bz = hz; 
 	
     /* estimated direction of gravity and flux (v and w) */
@@ -191,58 +183,32 @@ static void updateAHRS(double gx,double gy,double gz,double ax,double ay,double 
     q3 = q3 + (q0*gz + q1*gy - q2*gx)*halfT;
 
     /* normalise quaternion */
-    norm = sqrt(q0*q0 + q1*q1 + q2*q2 + q3*q3);
-    q0 = q0 / norm;
-    q1 = q1 / norm;
-    q2 = q2 / norm;
-    q3 = q3 / norm;
+    norm = invSqrt(q0*q0 + q1*q1 + q2*q2 + q3*q3);
+    q0 = q0 * norm;
+    q1 = q1 * norm;
+    q2 = q2 * norm;
+    q3 = q3 * norm;
     
     /* output data */
-    angle->imu_yaw = atan2(2 * q1 * q2 + 2 * q0 * q3, -2 * q2*q2 - 2 * q3* q3 + 1)* 57.3; 
-    angle->imu_pitch = asin(-2 * q1 * q3 + 2 * q0* q2)* 57.3;																			// pitcho???
-    angle->imu_roll = atan2(2 * q2 * q3 + 2 * q0 * q1, -2 * q1 * q1 - 2 * q2* q2 + 1)* 57.3;
+    angle->Y = atan2(2 * q1 * q2 + 2 * q0 * q3, q0*q0+q1*q1-q2*q2-q3*q3)* 57.3; 
+    angle->P = asin(-2 * q1 * q3 + 2 * q0* q2)* 57.3;																			// pitcho???
+    angle->R = atan2(2 * q2 * q3 + 2 * q0 * q1, -2 * q1 * q1 - 2 * q2* q2 + 1)* 57.3;
 }
 
 //!< this functino must be called about every 2ms to get accurate eular angles
-uint32_t imu_get_euler_angle(imu_float_euler_angle_t * angle, imu_raw_data_t * raw_data)
+
+uint32_t imu_get_euler_angle(float *adata, float *gdata, float *mdata, attitude_t *angle)
 {
-    uint8_t ret = 0;
-    int16_t ax,ay,az,gx,gy,gz,mx,my,mz;
-    imu_raw_data_t filter_data;
-    imu_float_data_t float_data;
-    ret += gpIOInstallStruct->imu_get_accel(&ax, &ay, &az);
-    ret += gpIOInstallStruct->imu_get_gyro(&gx, &gy, &gz); 
-    ret += gpIOInstallStruct->imu_get_mag(&mx, &my, &mz);
-    if(ret >0)
-    {
-      return ret;
-    }
-    raw_data->ax = ax;
-    raw_data->ay = ay;
-    raw_data->az = az;
-    raw_data->gx = gx;
-    raw_data->gy = gy;
-    raw_data->gz = gz;
-    raw_data->mx = mx;
-    raw_data->my = my;
-    raw_data->mz = mz;
 
-    /* I need rawdata I give you filtered data */
-    imu_sliding_filter(*raw_data, &filter_data);
-
-    /* I need filtered data I give you float data */
-    imu_format_data(&filter_data, &float_data);
-    
-    /* I need float data I give you euler angles */
-    updateAHRS( float_data.gx * Gyro_Gr,
-                float_data.gy * Gyro_Gr,
-                float_data.gz * Gyro_Gr,
-                float_data.ax,
-                float_data.ay,
-                float_data.az,
-                float_data.mx,
-                float_data.my,
-                float_data.mz,
+    updateAHRS( (float)gdata[0] * Gyro_Gr,
+                (float)gdata[1] * Gyro_Gr,
+                (float)gdata[2] * Gyro_Gr,
+                (float)adata[0],
+                (float)adata[1],
+                (float)adata[2],
+                (float)mdata[0],
+                (float)mdata[1],
+                (float)mdata[2],
                 angle);
     return 0;
 }

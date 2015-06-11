@@ -173,6 +173,7 @@ int wget(int argc, char** argv)
         }
     }
     
+    p +=4; /* scape /r/n/r/n */
     offset = p - recv_data;
     
     /* handle local save path */

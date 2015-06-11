@@ -41,13 +41,8 @@ const static unsigned char _dummy_txt[] =
 
 const struct romfs_dirent WEAK _root_dirent[] =
 {
-    //{ROMFS_DIRENT_DIR, "dummy", (rt_uint8_t *)_dummy, sizeof(_dummy)/sizeof(_dummy)},
-    {ROMFS_DIRENT_DIR, "sd", (rt_uint8_t *)RT_NULL, RT_NULL},
-    {ROMFS_DIRENT_DIR, "nfs", (rt_uint8_t *)RT_NULL, RT_NULL},
-    {ROMFS_DIRENT_DIR, "nand", (rt_uint8_t *)RT_NULL, RT_NULL},
-    {ROMFS_DIRENT_DIR, "lib", (rt_uint8_t *)RT_NULL, RT_NULL},
-    {ROMFS_DIRENT_DIR, "proc", (rt_uint8_t *)RT_NULL, RT_NULL},
-  //  {ROMFS_DIRENT_FILE, "dummy.txt", _dummy_txt, sizeof(_dummy_txt)},
+    {ROMFS_DIRENT_DIR, "dummy", (rt_uint8_t *)_dummy, sizeof(_dummy)/sizeof(_dummy[0])},
+    {ROMFS_DIRENT_FILE, "dummy.txt", _dummy_txt, sizeof(_dummy_txt)},
 };
 
 const struct romfs_dirent WEAK romfs_root =

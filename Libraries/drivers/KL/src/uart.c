@@ -1,13 +1,3 @@
-/**
-  ******************************************************************************
-  * @file    uart.c
-  * @author  YANDLD
-  * @version V2.5
-  * @date    2014.3.26
-  * @brief   www.beyondcore.net   http://upcmcu.taobao.com 
-  ******************************************************************************
-  */
-  
 #include "uart.h"
 #include "gpio.h"
 #include "common.h"
@@ -21,14 +11,9 @@
 #endif
 
 
-#define UARTN_BASES {(void*)UART0, (void*)UART1, (void*)UART2}
-/* gloabl const table defination */
-const void* UART_InstanceTable[] = UARTN_BASES;
-static UART_CallBackTxType UART_CallBackTxTable[ARRAY_SIZE(UART_InstanceTable)] = {NULL};
-static UART_CallBackRxType UART_CallBackRxTable[ARRAY_SIZE(UART_InstanceTable)] = {NULL};
-/* special use for printf */
-static uint8_t UART_DebugInstance;
-
+#ifdef MKL26Z4_H_
+#undef  UART_BASES
+#define UART_BASES  {UART0, UART1, UART2}
 static const struct reg_ops SIM_UARTClockGateTable[] =
 {
     {(void*)&(SIM->SCGC4), SIM_SCGC4_UART0_MASK},
@@ -42,6 +27,26 @@ static const IRQn_Type UART_IRQnTable[] =
     UART1_IRQn,
     UART2_IRQn,
 };
+#endif
+
+#ifdef MKL27Z4_H_
+static const struct reg_ops SIM_UARTClockGateTable[] =
+{
+    {(void*)&(SIM->SCGC4), SIM_SCGC4_UART2_MASK},
+};
+
+static const IRQn_Type UART_IRQnTable[] = 
+{
+    UART0_FLEXIO_IRQn,
+};
+#endif
+
+/* gloabl const table defination */
+const void* UART_InstanceTable[] = UART_BASES;
+static UART_CallBackTxType UART_CallBackTxTable[ARRAY_SIZE(UART_InstanceTable)] = {NULL};
+static UART_CallBackRxType UART_CallBackRxTable[ARRAY_SIZE(UART_InstanceTable)] = {NULL};
+/* special use for printf */
+static uint8_t UART_DebugInstance;
 
 #ifdef UART_USE_STDIO
 #ifdef __CC_ARM // MDK Support
@@ -188,10 +193,13 @@ uint8_t UART_QuickInit(uint32_t MAP, uint32_t baudrate)
     {
         CLOCK_GetClockFrequency(kMCGOutClock, &clock);
         
+        #ifdef SIM_SOPT2_UART0SRC_MASK
         /* use PLL/2 or FLL */
         SIM->SOPT2 &= ~SIM_SOPT2_UART0SRC_MASK;
         SIM->SOPT2 |= SIM_SOPT2_UART0SRC(1);  
-	
+        #endif
+        
+        #ifdef MCG_C6_PLLS_MASK
         if(MCG->C6 & MCG_C6_PLLS_MASK) /* PLL */
         {
             SIM->SOPT2 |= SIM_SOPT2_PLLFLLSEL_MASK;
@@ -201,6 +209,7 @@ uint8_t UART_QuickInit(uint32_t MAP, uint32_t baudrate)
         {
             SIM->SOPT2 &= ~SIM_SOPT2_PLLFLLSEL_MASK;
         }
+        #endif
     }
     else
     {
@@ -247,57 +256,54 @@ void UART_ITDMAConfig(uint32_t instance, UART_ITDMAConfig_Type config, bool stat
     *((uint32_t*) SIM_UARTClockGateTable[instance].addr) |= SIM_UARTClockGateTable[instance].mask;
     UART_Type * UARTx = (UART_Type*)UART_InstanceTable[instance];
     
-    switch(config)
-    {
-        case kUART_IT_Tx:
-            (status)?
-            (UARTx->C2 |= UART_C2_TIE_MASK):
-            (UARTx->C2 &= ~UART_C2_TIE_MASK);
-            NVIC_EnableIRQ(UART_IRQnTable[instance]);
-            break; 
-        case kUART_IT_Rx:
-            (status)?
-            (UARTx->C2 |= UART_C2_RIE_MASK):
-            (UARTx->C2 &= ~UART_C2_RIE_MASK);
-            NVIC_EnableIRQ(UART_IRQnTable[instance]);
-            break;
-        case kUART_DMA_Tx:
-            (status)?
-            (UARTx->C2 |= UART_C2_TIE_MASK):
-            (UARTx->C2 &= ~UART_C2_TIE_MASK);
-            if(instance == HW_UART0)
-            {
-                (status)?
-                (UART0->C5 |= UART0_C5_TDMAE_MASK):
-                (UART0->C5 &= ~UART0_C5_TDMAE_MASK);
-            }
-            else
-            {
-                (status)?
-                (UARTx->C4 |= UART_C4_TDMAS_MASK):
-                (UARTx->C4 &= ~UART_C4_TDMAS_MASK);
-            }
-            break;
-        case kUART_DMA_Rx:
-            (status)?
-            (UARTx->C2 |= UART_C2_RIE_MASK):
-            (UARTx->C2 &= ~UART_C2_RIE_MASK);
-            if(instance == HW_UART0)
-            {
-                (status)?
-                (UART0->C5 |= UART0_C5_RDMAE_MASK):
-                (UART0->C5 &= ~UART0_C5_RDMAE_MASK);
-            }
-            else
-            {
-                (status)?
-                (UARTx->C4 |= UART_C4_RDMAS_MASK):
-                (UARTx->C4 &= ~UART_C4_RDMAS_MASK); 
-            }
-            break;
-        default:
-            break;
-    }
+//    switch(config)
+//    {
+//        case kUART_IT_Tx:
+//            (status)?
+//            (UARTx->C2 |= UART_C2_TIE_MASK):
+//            (UARTx->C2 &= ~UART_C2_TIE_MASK);
+//            NVIC_EnableIRQ(UART_IRQnTable[instance]);
+//            break; 
+//        case kUART_IT_Rx:
+//            (status)?
+//            (UARTx->C2 |= UART_C2_RIE_MASK):
+//            (UARTx->C2 &= ~UART_C2_RIE_MASK);
+//            NVIC_EnableIRQ(UART_IRQnTable[instance]);
+//            break;
+//        case kUART_DMA_Tx:
+//            if(instance == HW_UART0)
+//            {
+//                (status)?
+//                (UART0->C5 |= UART0_C5_TDMAE_MASK):
+//                (UART0->C5 &= ~UART0_C5_TDMAE_MASK);
+//            }
+//            else
+//            {
+//                (status)?
+//                (UARTx->C4 |= UART_C4_TDMAS_MASK):
+//                (UARTx->C4 &= ~UART_C4_TDMAS_MASK);
+//            }
+//            break;
+//        case kUART_DMA_Rx:
+//            (status)?
+//            (UARTx->C2 |= UART_C2_RIE_MASK):
+//            (UARTx->C2 &= ~UART_C2_RIE_MASK);
+//            if(instance == HW_UART0)
+//            {
+//                (status)?
+//                (UART0->C5 |= UART0_C5_RDMAE_MASK):
+//                (UART0->C5 &= ~UART0_C5_RDMAE_MASK);
+//            }
+//            else
+//            {
+//                (status)?
+//                (UARTx->C4 |= UART_C4_RDMAS_MASK):
+//                (UARTx->C4 &= ~UART_C4_RDMAS_MASK); 
+//            }
+//            break;
+//        default:
+//            break;
+//    }
 }
 
 /**
@@ -350,6 +356,7 @@ void UART_Init(UART_InitTypeDef* UART_InitStruct)
 {
     uint16_t sbr;
     static bool is_fitst_init = true;
+    
     /* enable clock gate */
     *((uint32_t*) SIM_UARTClockGateTable[UART_InitStruct->instance].addr) |= SIM_UARTClockGateTable[UART_InitStruct->instance].mask;
     

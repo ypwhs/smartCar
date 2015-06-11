@@ -1,7 +1,7 @@
 #include <rthw.h>
 #include <rtthread.h>
 #include <stdint.h>
-#include "drv_beep.h"
+#include "rtt_drv.h"
 #include "ftm.h"
 
 static struct rt_device beep_device;

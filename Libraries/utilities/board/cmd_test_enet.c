@@ -39,7 +39,7 @@ int DoENET(int argc, char * const argv[])
     }
     GPIO_WriteBit(HW_GPIOE,26, 1);
     DelayMs(100);						//HHH 5-6
-    r = ksz8041_init(BOARD_ENET_PHY_ADDR);
+    r = ksz8041_init();
     if(r)
     {
         printf("enet phy failed\r\n");

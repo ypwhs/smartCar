@@ -54,8 +54,8 @@ typedef enum
 /*!< 每帧数据位个数 */
 typedef enum 
 {
-    kSPI_PCS_ReturnInactive  = 0,   //!< 传输完成后CS信号保持片选中状态
-    kSPI_PCS_KeepAsserted  = 1,     //!< 传输完成后CS信号保持未选中状态
+    kSPI_PCS_ReturnInactive  = 0,   //!< 传输完成后CS信号保持未选中状态(通常为返回高电平)
+    kSPI_PCS_KeepAsserted  = 1,     //!< 传输完成后CS信号保持片选中状态(通常为拉低)
 }SPI_PCS_Type;
 
 typedef enum

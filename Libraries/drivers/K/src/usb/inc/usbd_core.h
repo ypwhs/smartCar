@@ -62,7 +62,7 @@ extern        void usbd_class_init    (void);
 
 extern        void USBD_EndPoint0     (U32 event);
 
-extern __task void USBD_RTX_EndPoint0 (void);
+extern  void USBD_RTX_EndPoint0 (void);
 
 
 #endif  /* __USBD_CORE_H__ */

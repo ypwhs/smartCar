@@ -10,6 +10,10 @@
 #ifndef __CH_LIB_K_H__
 #define __CH_LIB_K_H__
 
+#ifdef __cplusplus
+ extern "C" {
+#endif
+     
 /* libray driver */
 #include "common.h"
 #include "gpio.h"
@@ -46,6 +50,10 @@
 
 /* USB */
 #include "../src/usb/inc/rl_usb.h"
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

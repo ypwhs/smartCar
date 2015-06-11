@@ -5,7 +5,7 @@
   * @version V2.5
   * @date    2014.3.26
   * @brief   www.beyondcore.net   http://upcmcu.taobao.com 
-  * @note    ??????IIC?????????
+  * @note    此文件为芯片IIC模块的底层功能函数
   ******************************************************************************
   */
 #include "i2c.h"
@@ -40,7 +40,8 @@ uint8_t I2C_QuickInit(uint32_t MAP, uint32_t baudrate)
     /* open drain and pull up */
     for(i = 0; i < pq->io_offset; i++)
     {
-        GPIO_QuickInit(pq->io_instance, pq->io_base + i, kGPIO_Mode_OPP);
+        GPIO_QuickInit(pq->io_instance, pq->io_base + i, kGPIO_Mode_OOD);
+        GPIO_QuickInit(pq->io_instance, pq->io_base + i, kGPIO_Mode_OOD);
         GPIO_WriteBit(pq->io_instance, pq->io_base + i, 1);
         PORT_PinPullConfig(pq->io_instance, pq->io_base + i, kPullUp);
     }
@@ -73,6 +74,9 @@ uint8_t I2C_QuickInit(uint32_t MAP, uint32_t baudrate)
             break;
         case I2C0_SCL_PE24_SDA_PE25:
             i2c.scl_pin = 24;i2c.sda_pin = 25;
+            break;
+        case I2C1_SCL_PC01_SDA_PC02:
+            i2c.scl_pin = 1;i2c.sda_pin = 2;
             break;
         default:
             break;
@@ -190,7 +194,16 @@ static uint8_t I2C_GetByte(void)
     return byte;
 }
 
-
+/**
+ * @brief  I2C write mutiple data
+ * @param  instance: instance of i2c moudle
+ *         @arg chipAddr   : i2c slave addr
+ *         @arg addr       : i2c slave register offset
+ *         @arg addrLen    : len of slave register addr(in byte)
+ *         @arg buf        : data buf
+ *         @arg buf        : read len
+ * @note 
+ */
 uint8_t I2C_BurstWrite(uint32_t instance ,uint8_t chipAddr, uint32_t addr, uint32_t addrLen, uint8_t *buf, uint32_t len)
 {
     uint8_t *p;
@@ -220,11 +233,29 @@ uint8_t I2C_BurstWrite(uint32_t instance ,uint8_t chipAddr, uint32_t addr, uint3
     return err;
 }
 
+/**
+ * @brief  write single register value
+ * @param  instance: instance of i2c moudle
+ *         @arg chipAddr   : i2c slave addr
+ *         @arg addr       : i2c slave register offset
+ *         @arg pData      : data pointer
+ * @note   usually used on i2c sensor devices
+ */
 uint8_t I2C_WriteSingleRegister(uint32_t instance, uint8_t chipAddr, uint8_t addr, uint8_t data)
 {
     return I2C_BurstWrite(instance, chipAddr, addr, 1, &data, 1);
 }
 
+/**
+ * @brief  I2C read mutiple data
+ * @param  instance: instance of i2c moudle
+ *         @arg chipAddr   : i2c slave addr
+ *         @arg addr       : i2c slave register offset
+ *         @arg addrLen    : len of slave register addr(in byte)
+ *         @arg buf        : data buf
+ *         @arg buf        : read len
+ * @note 
+ */
 int32_t I2C_BurstRead(uint32_t instance ,uint8_t chipAddr, uint32_t addr, uint32_t addrLen, uint8_t *buf, uint32_t len)
 {
     uint8_t *p;
@@ -263,6 +294,12 @@ int32_t I2C_BurstRead(uint32_t instance ,uint8_t chipAddr, uint32_t addr, uint32
     return err;
 }
 
+/**
+ * @brief  proble i2c bus
+ * @param  instance: instance of i2c moudle
+ *         @arg chipAddr   : i2c slave addr
+ * @note   see if it's available i2c slave on the bus
+ */
 uint8_t I2C_Probe(uint32_t instance, uint8_t chipAddr)
 {
     uint8_t err;
@@ -277,6 +314,14 @@ uint8_t I2C_Probe(uint32_t instance, uint8_t chipAddr)
     return err;
 }
 
+/**
+ * @brief  read single register value
+ * @param  instance: instance of i2c moudle
+ *         @arg chipAddr   : i2c slave addr
+ *         @arg addr       : i2c slave register offset
+ *         @arg pData      : data pointer
+ * @note   usually used on i2c sensor devices
+ */
 uint8_t I2C_ReadSingleRegister(uint32_t instance, uint8_t chipAddr, uint8_t addr, uint8_t* pData)
 {
     return I2C_BurstRead(instance, chipAddr, addr, 1, pData, 1);
@@ -456,10 +501,10 @@ static const _I2C_Divider_Type I2C_DiverTable[] =
 
 //!< set i2c baudrate
 /**
- * @brief  IIC?????? ???? ??????
- * @param  instance: IIC??? HW_I2C0~2
- * @param  sourceClockInHz :IIC???????
- * @param  baudrate        :IIC??????
+ * @brief  IIC通信速度设置 内部函数 用户无需使用
+ * @param  instance: IIC模块号 HW_I2C0~2
+ * @param  sourceClockInHz :IIC模块时钟源频率
+ * @param  baudrate        :IIC模块通信速度
  * @retval None
  */
 static void I2C_SetBaudrate(uint32_t instance, uint32_t sourceClockInHz, uint32_t baudrate)
@@ -514,17 +559,17 @@ static void I2C_SetBaudrate(uint32_t instance, uint32_t sourceClockInHz, uint32_
 
 
  /**
- * @brief  ?????IIC??
+ * @brief  快速初始化IIC模块
  * @code
- *      // ???I2C??: ??I2C1???SCL:PC10 SDA:PC11,????:47000Hz
+ *      // 初始化I2C模块: 使用I2C1模块的SCL:PC10 SDA:PC11，通信速度:47000Hz
  *      I2C_QuickInit(I2C1_SCL_PC10_SDA_PC11, 47000);
  * @endcode
- * @param  MAP: I2C????????,??i2c.h??
+ * @param  MAP: I2C快速初始化选择项，详见i2c.h文件
  *         @arg I2C1_SCL_PE01_SDA_PE00
  *         @arg         ...
  *         @arg I2C1_SCL_PC10_SDA_PC11
- * @param  baudrate :???? ???: 48000Hz 76000Hz 96000Hz 376000Hz
- * @retval i2c???
+ * @param  baudrate :通信速度 建议为: 48000Hz 76000Hz 96000Hz 376000Hz
+ * @retval i2c模块号
  */
 uint8_t I2C_QuickInit(uint32_t MAP, uint32_t baudrate)
 {
@@ -548,16 +593,16 @@ uint8_t I2C_QuickInit(uint32_t MAP, uint32_t baudrate)
 }
 
 /**
- * @brief  ???I2C??
- * @note ??????????
+ * @brief  初始化I2C模块
+ * @note 需要其它函数配合使用
  * @code
- *     //??i2c?1?? ?????48000hz
- *     I2C_InitTypeDef I2C_InitStruct1; //???????
- *     I2C_InitStruct1.baudrate = HW_I2C1; //??i2c?1??
- *     I2C_InitStruct1.instance = 48000;   //??????48000
+ *     //使用i2c的1模块 通信速度为48000hz
+ *     I2C_InitTypeDef I2C_InitStruct1; //申请一个结构体
+ *     I2C_InitStruct1.baudrate = HW_I2C1; //选择i2c的1模块
+ *     I2C_InitStruct1.instance = 48000;   //设置通信速度48000
  *     I2C_Init(&I2C_InitStruct1);
  * @endcode
- * @param  I2C_InitStruct :i2c????????
+ * @param  I2C_InitStruct :i2c初始化配置结构体
  * @retval None
  */
 void I2C_Init(I2C_InitTypeDef* I2C_InitStruct)
@@ -579,15 +624,15 @@ void I2C_Init(I2C_InitTypeDef* I2C_InitStruct)
 }
 
 /**
- * @brief  ??i2c????????
+ * @brief  控制i2c产生一个开始信号
  * @code
- *     //??i2c?1????????
+ *     //使用i2c的1模块产生开始信号
  *     I2C_GenerateSTART(HW_I2C1);
  * @endcode
- * @param  instance :I2C??? 
- *         @arg HW_I2C0  :I2C0??
- *         @arg HW_I2C1  :I2C1??
- *         @arg HW_I2C2  :I2C2??
+ * @param  instance :I2C模块号 
+ *         @arg HW_I2C0  :I2C0模块
+ *         @arg HW_I2C1  :I2C1模块
+ *         @arg HW_I2C2  :I2C2模块
  * @retval None
  */
 void I2C_GenerateSTART(uint32_t instance)
@@ -599,15 +644,15 @@ void I2C_GenerateSTART(uint32_t instance)
 }
 
 /**
- * @brief  ?????????
+ * @brief  产生一个再开始信号
  * @code
- *     //??i2c?1????????
+ *     //使用i2c的1模块产生开始信号
  *     I2C_GenerateRESTART(HW_I2C1);
  * @endcode
- * @param  instance :I2C??? 
- *         @arg HW_I2C0  :I2C0??
- *         @arg HW_I2C1  :I2C1??
- *         @arg HW_I2C2  :I2C2??
+ * @param  instance :I2C模块号 
+ *         @arg HW_I2C0  :I2C0模块
+ *         @arg HW_I2C1  :I2C1模块
+ *         @arg HW_I2C2  :I2C2模块
  * @retval None
  */
 void I2C_GenerateRESTART(uint32_t instance)
@@ -618,15 +663,15 @@ void I2C_GenerateRESTART(uint32_t instance)
 }
 
 /**
- * @brief  ??????
+ * @brief  产生停止信号
  * @code
- *     //??i2c?1????????
+ *     //使用i2c的1模块产生停止信号
  *     I2C_GenerateSTOP(HW_I2C1);
  * @endcode
- * @param  instance :I2C??? 
- *         @arg HW_I2C0  :I2C0??
- *         @arg HW_I2C1  :I2C1??
- *         @arg HW_I2C2  :I2C2??
+ * @param  instance :I2C模块号 
+ *         @arg HW_I2C0  :I2C0模块
+ *         @arg HW_I2C1  :I2C1模块
+ *         @arg HW_I2C2  :I2C2模块
  * @retval None
  */
 void I2C_GenerateSTOP(uint32_t instance)
@@ -638,16 +683,16 @@ void I2C_GenerateSTOP(uint32_t instance)
 }
 
 /**
- * @brief  I2C???????
+ * @brief  I2C发送一字节数据
  * @code
- *     //??i2c?1??????0x5A
+ *     //使用i2c的1模块发送数据0x5A
  *     I2C_SendData(HW_I2C1, 0x5A);
  * @endcode
- * @param  instance :I2C??? 
- *         @arg HW_I2C0  :I2C0??
- *         @arg HW_I2C1  :I2C1??
- *         @arg HW_I2C2  :I2C2??
- * @param  data     :???????
+ * @param  instance :I2C模块号 
+ *         @arg HW_I2C0  :I2C0模块
+ *         @arg HW_I2C1  :I2C1模块
+ *         @arg HW_I2C2  :I2C2模块
+ * @param  data     :需要发送的数据
  * @retval None
  */
 void I2C_SendData(uint32_t instance, uint8_t data)
@@ -658,17 +703,17 @@ void I2C_SendData(uint32_t instance, uint8_t data)
 }
 
 /**
- * @brief  I2C???????
+ * @brief  I2C读取一字节数据
  * @code
- *     //??i2c?1??????
- *      uint8_t data; //????????
+ *     //使用i2c的1模块读取数据
+ *      uint8_t data; //存储接收到的数据
  *     data = I2C_ReadData(HW_I2C1);
  * @endcode
- * @param  instance :I2C??? 
- *         @arg HW_I2C0  :I2C0??
- *         @arg HW_I2C1  :I2C1??
- *         @arg HW_I2C2  :I2C2??
- * @retval  data    :?????
+ * @param  instance :I2C模块号 
+ *         @arg HW_I2C0  :I2C0模块
+ *         @arg HW_I2C1  :I2C1模块
+ *         @arg HW_I2C2  :I2C2模块
+ * @retval  data    :接收的数据
  */
 uint8_t I2C_ReadData(uint32_t instance)
 {
@@ -677,19 +722,19 @@ uint8_t I2C_ReadData(uint32_t instance)
 	return (I2C_InstanceTable[instance]->D);
 }
 /**
- * @brief  i2c?????????????
+ * @brief  i2c发送一个地址并设置数据方向
  * @code
- *     //??i2c?1??????0x55???????
+ *     //使用i2c的1模块向地址为0x55的从机读取数据
  *    I2C_Send7bitAddress(HW_I2C1, 0x55, kI2C_Read);
  * @endcode
- * @param  instance :I2C??? 
- *         @arg HW_I2C0  :I2C0??
- *         @arg HW_I2C1  :I2C1??
- *         @arg HW_I2C2  :I2C2??
- * @param  address: ??????:0~127
- * @param  direction:  ????????
- *         @arg kI2C_Read  : ????
- *         @arg kI2C_Write : ????
+ * @param  instance :I2C模块号 
+ *         @arg HW_I2C0  :I2C0模块
+ *         @arg HW_I2C1  :I2C1模块
+ *         @arg HW_I2C2  :I2C2模块
+ * @param  address: 发送从机地址：0~127
+ * @param  direction:  数据传输方向控制
+ *         @arg kI2C_Read  : 主机读取
+ *         @arg kI2C_Write : 主机发送
  * @retval None
  */
 void I2C_Send7bitAddress(uint32_t instance, uint8_t address, I2C_Direction_Type direction)
@@ -702,13 +747,13 @@ void I2C_Send7bitAddress(uint32_t instance, uint8_t address, I2C_Direction_Type 
 }
 
 /**
- * @brief  ?????? 
- * @note   ????????SendData????? ????????
- * @param  instance :I2C??? 
- *         @arg HW_I2C0  :I2C0??
- *         @arg HW_I2C1  :I2C1??
- *         @arg HW_I2C2  :I2C2??
- * @retval 0:????? 1:???? 2:??
+ * @brief  等待应答信号 
+ * @note   此函数一般在使用SendData函数后调用 用于等待应答信号
+ * @param  instance :I2C模块号 
+ *         @arg HW_I2C0  :I2C0模块
+ *         @arg HW_I2C1  :I2C1模块
+ *         @arg HW_I2C2  :I2C2模块
+ * @retval 0:接收到应答 1:没有应答 2:超时
  */
 uint8_t I2C_WaitAck(uint32_t instance)
 {
@@ -746,18 +791,18 @@ uint8_t I2C_WaitAck(uint32_t instance)
     }
 }
 /**
- * @brief  ??i2c????????????
+ * @brief  设置i2c在主模式下的数据读写操作
  * @code
- *     //??i2c?1??????
+ *     //使用i2c的1模块读取数据
  *    I2C_SetMasterMode(HW_I2C1, kI2C_Read);
  * @endcode
- * @param  instance :I2C??? 
- *         @arg HW_I2C0  :I2C0??
- *         @arg HW_I2C1  :I2C1??
- *         @arg HW_I2C2  :I2C2??
- * @param  direction:  ????????
- *         @arg kI2C_Read  : ????
- *         @arg kI2C_Write : ????
+ * @param  instance :I2C模块号 
+ *         @arg HW_I2C0  :I2C0模块
+ *         @arg HW_I2C1  :I2C1模块
+ *         @arg HW_I2C2  :I2C2模块
+ * @param  direction:  数据传输方向控制
+ *         @arg kI2C_Read  : 主机读取
+ *         @arg kI2C_Write : 主机发送
  * @retval None
  */
 void I2C_SetMasterMode(uint32_t instance, I2C_Direction_Type direction)
@@ -767,11 +812,11 @@ void I2C_SetMasterMode(uint32_t instance, I2C_Direction_Type direction)
 	(direction == kI2C_Write)?(I2C_InstanceTable[instance]->C1 |= I2C_C1_TX_MASK):(I2C_InstanceTable[instance]->C1 &= ~I2C_C1_TX_MASK);
 }
 /**
- * @brief  ?? NACK ??
- * @param  instance :I2C??? 
- *         @arg HW_I2C0  :I2C0??
- *         @arg HW_I2C1  :I2C1??
- *         @arg HW_I2C2  :I2C2??
+ * @brief  产生 NACK 信号
+ * @param  instance :I2C模块号 
+ *         @arg HW_I2C0  :I2C0模块
+ *         @arg HW_I2C1  :I2C1模块
+ *         @arg HW_I2C2  :I2C2模块
  * @retval None
  */
 void I2C_GenerateNAck(uint32_t instance)
@@ -781,11 +826,11 @@ void I2C_GenerateNAck(uint32_t instance)
 	I2C_InstanceTable[instance]->C1 |= I2C_C1_TXAK_MASK;
 }
 /**
- * @brief  ?? ACK ??
- * @param  instance :I2C??? 
- *         @arg HW_I2C0  :I2C0??
- *         @arg HW_I2C1  :I2C1??
- *         @arg HW_I2C2  :I2C2??
+ * @brief  产生 ACK 信号
+ * @param  instance :I2C模块号 
+ *         @arg HW_I2C0  :I2C0模块
+ *         @arg HW_I2C1  :I2C1模块
+ *         @arg HW_I2C2  :I2C2模块
  * @retval None
  */
 void I2C_GenerateAck(uint32_t instance)
@@ -795,16 +840,16 @@ void I2C_GenerateAck(uint32_t instance)
 	I2C_InstanceTable[instance]->C1 &= ~I2C_C1_TXAK_MASK;
 }
 /**
- * @brief  I2C?????DMA????
- * @param  instance :I2C??? 
- *         @arg HW_I2C0  :I2C0??
- *         @arg HW_I2C1  :I2C1??
- *         @arg HW_I2C2  :I2C2??
- * @param  config  :???DMA??
- *         @arg kI2C_IT_Disable  :???? 
- *         @arg kI2C_DMA_Disable :??DMA
- *         @arg kI2C_IT_BTC,     :????????
- *         @arg kI2C_DMA_BTC     :??????DMA??
+ * @brief  I2C模块中断或DMA功能设置
+ * @param  instance :I2C模块号 
+ *         @arg HW_I2C0  :I2C0模块
+ *         @arg HW_I2C1  :I2C1模块
+ *         @arg HW_I2C2  :I2C2模块
+ * @param  config  :中断或DMA类型
+ *         @arg kI2C_IT_Disable  :关闭中断 
+ *         @arg kI2C_DMA_Disable :关闭DMA
+ *         @arg kI2C_IT_BTC,     :开启发送完成中断
+ *         @arg kI2C_DMA_BTC     :开启发送完成DMA功能
  * @retval None
  */
 void I2C_ITDMAConfig(uint32_t instance, I2C_ITDMAConfig_Type config)
@@ -833,14 +878,14 @@ void I2C_ITDMAConfig(uint32_t instance, I2C_ITDMAConfig_Type config)
 }
 
 /**
- * @brief  ????????
- * @param  instance :I2C??? 
- *         @arg HW_I2C0  :I2C0??
- *         @arg HW_I2C1  :I2C1??
- *         @arg HW_I2C2  :I2C2??
- * @param AppCBFun: ????????
+ * @brief  注册中断回调函数
+ * @param  instance :I2C模块号 
+ *         @arg HW_I2C0  :I2C0模块
+ *         @arg HW_I2C1  :I2C1模块
+ *         @arg HW_I2C2  :I2C2模块
+ * @param AppCBFun: 回调函数指针入口
  * @retval None
- * @note ?????????????????
+ * @note 对于此函数的具体应用请查阅应用实例
  */
 void I2C_CallbackInstall(uint32_t instance, I2C_CallBackType AppCBFun)
 {
@@ -851,12 +896,12 @@ void I2C_CallbackInstall(uint32_t instance, I2C_CallBackType AppCBFun)
 }
 
 /**
- * @brief  ??I2C??
- * @param  instance :I2C??? 
- *         @arg HW_I2C0  :I2C0??
- *         @arg HW_I2C1  :I2C1??
- *         @arg HW_I2C2  :I2C2??
- * @retval 0 :I2C?  1 :I2C??
+ * @brief  检测I2C状态
+ * @param  instance :I2C模块号 
+ *         @arg HW_I2C0  :I2C0模块
+ *         @arg HW_I2C1  :I2C1模块
+ *         @arg HW_I2C2  :I2C2模块
+ * @retval 0 :I2C忙  1 :I2C空闲
  */
 uint8_t I2C_IsBusy(uint32_t instance)
 {
@@ -871,21 +916,21 @@ uint8_t I2C_IsBusy(uint32_t instance)
 }
 
 /**
- * @brief  ??i2c?????????????
+ * @brief  设置i2c在主模式下的连续数据读操作
  * @code
- *     //??i2c?1?????????0x55?????????0x01???10??,???data????
+ *     //使用i2c的1模块读取数据地址为0x55的从机中起始地址为0x01的数据10字节,存储在data的首地址
  *    I2C_BurstRead(HW_I2C1, 0x55, 0x01, 1, &data, 10);
  * @endcode
- * @param  instance :I2C??? 
- *         @arg HW_I2C0  :I2C0??
- *         @arg HW_I2C1  :I2C1??
- *         @arg HW_I2C2  :I2C2??
- * @param  deviceAddress :??????0~127
- * @param  subAddress    :???????
- * @param  subAddressLen :?????
- * @param  buf         :????????
- * @param  len       :???????
- * @retval ??????? 0 ;?? ?? :??
+ * @param  instance :I2C模块号 
+ *         @arg HW_I2C0  :I2C0模块
+ *         @arg HW_I2C1  :I2C1模块
+ *         @arg HW_I2C2  :I2C2模块
+ * @param  deviceAddress :从机设备地址0~127
+ * @param  subAddress    :读取的起始地址
+ * @param  subAddressLen :地址的长度
+ * @param  buf         :保存数据的首地址
+ * @param  len       :读取数据的长度
+ * @retval 数据的读取状态 0 ;成功 其它 :失败
  */
 int32_t I2C_BurstRead(uint32_t instance, uint8_t deviceAddress, uint32_t subAddress, uint32_t subAddressLen, uint8_t* buf, uint32_t len)
 {
@@ -964,21 +1009,21 @@ int32_t I2C_BurstRead(uint32_t instance, uint8_t deviceAddress, uint32_t subAddr
 }
 
 /**
- * @brief  ??i2c?????????????
+ * @brief  设置i2c在主模式下的连续数据写操作
  * @code
- *     //??i2c?1???data??10?????????0x55?????????0x01????
+ *     //使用i2c的1模块将data中的10字节数据写入地址为0x55的从机中起始地址为0x01的设备宏
  *    I2C_BurstWrite(HW_I2C1, 0x55, 0x01, 1, &data, 10);
  * @endcode
- * @param  instance :I2C??? 
- *         @arg HW_I2C0  :I2C0??
- *         @arg HW_I2C1  :I2C1??
- *         @arg HW_I2C2  :I2C2??
- * @param  deviceAddress :??????0~127
- * @param  subAddress    :???????
- * @param  subAddressLen :?????
- * @param  buf         :????????
- * @param  len       :???????
- * @retval ??????? 0 ;?? ?? :??
+ * @param  instance :I2C模块号 
+ *         @arg HW_I2C0  :I2C0模块
+ *         @arg HW_I2C1  :I2C1模块
+ *         @arg HW_I2C2  :I2C2模块
+ * @param  deviceAddress :从机设备地址0~127
+ * @param  subAddress    :写入的起始地址
+ * @param  subAddressLen :地址的长度
+ * @param  buf         :保存数据的首地址
+ * @param  len       :写入数据的长度
+ * @retval 数据的读取状态 0 ;成功 其它 :失败
  */
 uint8_t I2C_BurstWrite(uint32_t instance ,uint8_t deviceAddress, uint32_t subAddress, uint32_t subAddressLen, uint8_t *buf, uint32_t len)
 {
@@ -1036,19 +1081,19 @@ uint8_t I2C_BurstWrite(uint32_t instance ,uint8_t deviceAddress, uint32_t subAdd
 }
 
 /**
- * @brief  ????????(????????????8??? ?MMA845x??????)
+ * @brief  写一个从机寄存器(寄存器地址在从机中必须为8位地址 如MMA845x等传感器设备)
  * @code
- *     //??i2c?1???data??1?????????0x55???????0x01???
+ *     //使用i2c的1模块将data中的1字节数据写入地址为0x55的从机中地址为0x01的设备
  *    I2C_WriteSingleRegister(HW_I2C1, 0x55, 0x01, data);
  * @endcode
- * @param  instance :I2C??? 
- *         @arg HW_I2C0  :I2C0??
- *         @arg HW_I2C1  :I2C1??
- *         @arg HW_I2C2  :I2C2??
- * @param  deviceAddress :??????0~127
- * @param  registerAddress: ??????????
- * @param  Data: ???????
- * @retval 0:??  1:?????? 2:??????
+ * @param  instance :I2C模块号 
+ *         @arg HW_I2C0  :I2C0模块
+ *         @arg HW_I2C1  :I2C1模块
+ *         @arg HW_I2C2  :I2C2模块
+ * @param  deviceAddress :从机设备地址0~127
+ * @param  registerAddress: 寄存器在从机中的地址
+ * @param  Data: 需要写入的数据
+ * @retval 0:成功  1:地址发送失败 2:数据发送失败
  */
 uint8_t I2C_WriteSingleRegister(uint32_t instance, uint8_t deviceAddress, uint8_t registerAddress, uint8_t data)
 {
@@ -1056,19 +1101,19 @@ uint8_t I2C_WriteSingleRegister(uint32_t instance, uint8_t deviceAddress, uint8_
 }
 
 /**
- * @brief  ?????????(????????????8??? ?MMA845x??????)
+ * @brief  读取一个从机寄存器(寄存器地址在从机中必须为8位地址 如MMA845x等传感器设备)
  * @code
- *     //??i2c?1???????0x55???????0x01???,???data?
+ *     //使用i2c的1模块读取地址为0x55的从机中地址为0x01的数据，存储到data中
  *    I2C_WriteSingleRegister(HW_I2C1, 0x55, 0x01, &data);
  * @endcode
- * @param  instance :I2C??? 
- *         @arg HW_I2C0  :I2C0??
- *         @arg HW_I2C1  :I2C1??
- *         @arg HW_I2C2  :I2C2??
- * @param  deviceAddress :??????0~127
- * @param  registerAddress: ??????????
- * @param  pData: ????
- * @retval 0:??  1:?????? 2:??????
+ * @param  instance :I2C模块号 
+ *         @arg HW_I2C0  :I2C0模块
+ *         @arg HW_I2C1  :I2C1模块
+ *         @arg HW_I2C2  :I2C2模块
+ * @param  deviceAddress :从机设备地址0~127
+ * @param  registerAddress: 寄存器在从机中的地址
+ * @param  pData: 数据指针
+ * @retval 0:成功  1:地址发送失败 2:数据发送失败
  */
 uint8_t I2C_ReadSingleRegister(uint32_t instance, uint8_t deviceAddress, uint8_t registerAddress, uint8_t* pData)
 {
@@ -1143,10 +1188,10 @@ int SCCB_WriteSingleRegister(uint32_t instance, uint8_t chipAddr, uint8_t subAdd
 
 //! @}
 /**
- * @brief  ????????
- * @param  I2C0_IRQHandler :???I2C0????????
- *         I2C1_IRQHandler :???I2C1????????
- * @note ????????????
+ * @brief  中断处理函数入口
+ * @param  I2C0_IRQHandler :芯片的I2C0模块中断函数入口
+ *         I2C1_IRQHandler :芯片的I2C1模块中断函数入口
+ * @note 函数内部用于中断事件处理
  */
 void I2C0_IRQHandler(void)
 {

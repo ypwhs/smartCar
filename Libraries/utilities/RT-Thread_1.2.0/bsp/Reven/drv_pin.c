@@ -27,7 +27,7 @@ static const struct rt_pin_ops _ops =
 
 int rt_hw_pin_init(void)
 {    
-    return rt_device_pin_register("pa", &_ops, RT_NULL);
+    return rt_device_pin_register("pin", &_ops, RT_NULL);
 }
 
 INIT_BOARD_EXPORT(rt_hw_pin_init);

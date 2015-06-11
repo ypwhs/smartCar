@@ -19,7 +19,7 @@
 
 //!< API functions
 int hmc5883_init(uint32_t instance);
-int hmc5883_read_data(int16_t* x, int16_t* y, int16_t* z);
+int hmc5883_read_data(int16_t *mdata);
 
 
 #endif

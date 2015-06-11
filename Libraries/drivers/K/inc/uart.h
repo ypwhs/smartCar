@@ -113,9 +113,16 @@ int UART_printf(const char *fmt, ...);
 
 /* DMA support */
 #ifdef DMA0
-void UART_SetDMATxMode(uint32_t instance, bool status);
-void UART_DMASendByte(uint32_t instance, uint8_t* buf, uint32_t size);
-uint32_t UART_DMAGetRemainByte(uint32_t instance);
+/*
+uint32_t UART_Init();
+uint32_t UART_Config();
+void UART_SendData();
+uint8_t UART_GetData();
+*/
+int UART_printf(const char *format,...);
+void UART_DMASetCmd(uint32_t instance, uint32_t dir, bool status);
+void UART_DMASendData(uint32_t instance, uint8_t *buf, uint32_t len);
+void UART_DMAGetRemain(uint32_t instacne, uint32_t dir);
 #endif
 
 //!< param check

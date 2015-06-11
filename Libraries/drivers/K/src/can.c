@@ -16,10 +16,14 @@
 #define CAN_MB_MAX      (16) //最大邮箱数16个
 #if (!defined(CAN_BASES))
 
-    #if (defined(MK60DZ10))
-        #define CAN_BASES {CAN0, CAN1}
-    #endif
+#ifdef CAN0
+#define CAN_BASES   {CAN0}
+#elif  CAN1
+#define CAN_BASES   {CAN0, CAN1}
 #endif
+
+#endif
+
 /* global vars */
 CAN_Type * const CAN_InstanceTable[] = CAN_BASES;
         

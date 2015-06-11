@@ -3,7 +3,6 @@
 #include <rtdevice.h>
 #include <drivers/i2c.h>
 #include "board.h"
-#include "drv_i2c_bit_ops.h"
 
 static void (set_sda)(void *data, rt_int32_t state)
 {

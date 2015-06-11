@@ -5,7 +5,7 @@
   * @version V2.5
   * @date    2014.3.26
   * @brief   www.beyondcore.net   http://upcmcu.taobao.com 
-  * @note    ??????IIC?????????
+  * @note    此文件为芯片IIC模块的底层功能函数
   ******************************************************************************
   */
 #ifndef __CH_LIB_I2C_H__
@@ -39,7 +39,7 @@ typedef struct
 #define I2C1_SCL_PC10_SDA_PC11  (0X00009491U)
 #define I2C0_SCL_PD08_SDA_PD09  (0X00009098U)
 #define I2C0_SCL_PE24_SDA_PE25  (0X0000B160U)
-
+#define I2C1_SCL_PC01_SDA_PC02  (0X00008291U)
 typedef enum
 {
     kI2C_Read,                  //!< I2C Master Read Data
@@ -67,7 +67,6 @@ uint8_t I2C_ReadSingleRegister(uint32_t instance, uint8_t deviceAddress, uint8_t
 uint8_t I2C_WriteSingleRegister(uint32_t instance, uint8_t deviceAddress, uint8_t registerAddress, uint8_t data);
 int SCCB_ReadSingleRegister(uint32_t instance, uint8_t chipAddr, uint8_t subAddr, uint8_t* pData);
 int SCCB_WriteSingleRegister(uint32_t instance, uint8_t chipAddr, uint8_t subAddr, uint8_t data);
-uint8_t I2C_Probe(uint32_t instance, uint8_t chipAddr);
 /* test function */
 uint8_t I2C_Probe(uint32_t instance, uint8_t chipAddr);
 void I2C_Scan(uint32_t MAP);

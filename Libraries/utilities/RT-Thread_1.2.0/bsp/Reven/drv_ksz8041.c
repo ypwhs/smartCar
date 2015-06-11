@@ -1,6 +1,6 @@
 #include <rtthread.h>
 #include "chlib_k.h"
-#include "drv_ksz8041.h"
+#include "rtt_drv.h"
 #include <rtdevice.h>
 #include <netif/ethernetif.h>
 #include "ksz8041.h"
@@ -24,7 +24,6 @@ void ENET_ISR(void)
 
 static rt_err_t rt_ksz8041_init(rt_device_t dev)
 {
-    int r;
     /* init driver */
     ENET_InitTypeDef ENET_InitStruct1;
     ENET_InitStruct1.pMacAddress = gCfgLoca_MAC;
@@ -166,7 +165,7 @@ rt_err_t rt_ksz8041_tx( rt_device_t dev, struct pbuf* p)
     return RT_EOK;
 }
 
-/* enetPhyAddr: enet phy chip hardware addr, normally, it's 0 or 1 */
+
 int rt_hw_ksz8041_init(void)
 {
     device.parent.init       = rt_ksz8041_init;

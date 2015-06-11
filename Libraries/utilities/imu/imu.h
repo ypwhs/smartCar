@@ -1,4 +1,13 @@
-
+/**
+  ******************************************************************************
+  * @file    imu.h
+  * @author  YANDLD
+  * @version V2.5
+  * @date    2015.3.26
+  * @brief   www.beyondcore.net   http://upcmcu.taobao.com 
+  * @note    
+  ******************************************************************************
+  */
 #ifndef _IMU_H_
 #define _IMU_H_
 
@@ -6,38 +15,21 @@
 #include <stdint.h>
 
 
-#define SLIDING_FILTER_DEEP     (1)
+//#define SLIDING_FILTER_DEEP     (3)
 
-//!< return 0 if you get data succ. reutrn else if data get failed
-typedef struct
-{
-    int (*imu_get_accel)(int16_t * ax, int16_t * ay, int16_t * az);
-    int (*imu_get_gyro)(int16_t * gx, int16_t * gy, int16_t * gz);
-    int (*imu_get_mag)(int16_t * mx, int16_t * my, int16_t * mz);
-}imu_io_install_t;
+
 
 typedef struct 
 {
-    double imu_pitch;
-    double imu_roll;
-    double imu_yaw;
-}imu_float_euler_angle_t;
+    float P;
+    float R;
+    float Y;
+}attitude_t;
 
-typedef struct 
-{
-    int16_t ax;
-    int16_t ay;
-    int16_t az;
-    int16_t gx;
-    int16_t gy;
-    int16_t gz;
-    int16_t mx;
-    int16_t my;
-    int16_t mz;
-}imu_raw_data_t;
+
+
 
 //!< API functions
-uint32_t imu_io_install(imu_io_install_t * IOInstallStruct);
-uint32_t imu_get_euler_angle(imu_float_euler_angle_t * angle, imu_raw_data_t * raw_data);
-
+uint32_t imu_get_euler_angle(float *adata, float *gdata, float *mdata, attitude_t *angle);
+extern float halfT;
 #endif

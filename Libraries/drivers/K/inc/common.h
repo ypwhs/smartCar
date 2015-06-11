@@ -10,12 +10,18 @@
 #ifndef __CH_LIB_COMMON_H__
 #define __CH_LIB_COMMON_H__
 
+#ifdef __cplusplus
+ extern "C" {
+#endif
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
 
 #ifdef MK10D5
 #include "MK10D5.h"
+#elif MK10D7
+#include "MK10D7.h"
 #elif MK20D5
 #include "MK20D5.h"
 #elif MK10D10
@@ -162,7 +168,10 @@ void DelayInit(void);
 int32_t CLOCK_GetClockFrequency(CLOCK_Source_Type clockName, uint32_t* FrequenctInHz);
 uint32_t QuickInitEncode(QuickInit_Type * type);
 void QuickInitDecode(uint32_t map, QuickInit_Type* type);
+void EnterSTOPMode(bool enSleepOnExit);
 
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif

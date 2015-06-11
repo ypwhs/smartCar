@@ -10,19 +10,23 @@
 
 extern int Image$$ER_IROM1$$RO$$Limit;
 
-#define FLASH_OFFSET        ((uint32_t)&Image$$ER_IROM1$$RO$$Limit)   /* UDisk start offset */
-#define UDISK_SIZE          (FLASH_SIZE - FLASH_OFFSET)
-
+static  rt_mutex_t mutex;
 
 static struct rt_device dflash_device;
-static int SectorCnt;
+static uint32_t SectorSize;
+static uint32_t StartAddr;
+static uint32_t DiskSize;
 
 static rt_err_t rt_dflash_init (rt_device_t dev)
 {
     FLASH_Init();
     
-    SectorCnt = FLASH_GetSectorSize();
-    rt_kprintf("dflash sector size:%d 0ffset:0x%X\r\n", SectorCnt, FLASH_OFFSET);
+    SectorSize = FLASH_GetSectorSize();
+    StartAddr = RT_ALIGN(((uint32_t)&Image$$ER_IROM1$$RO$$Limit + SectorSize), SectorSize);
+    DiskSize = FLASH_SIZE - StartAddr;
+    rt_kprintf("dflash sector size:%d 0ffset:0x%X\r\n", SectorSize, StartAddr);
+    
+    mutex = rt_mutex_create("_mu", RT_IPC_FLAG_FIFO);
     
     return RT_EOK;
 }
@@ -39,7 +43,6 @@ static rt_err_t rt_dflash_close(rt_device_t dev)
 
 static rt_err_t rt_dflash_indicate(rt_device_t dev, rt_size_t size)
 {
-    //rt_kprintf("I need indicate\r\n"); 
     return RT_EOK;
 }
 
@@ -50,10 +53,13 @@ static rt_size_t rt_dflash_read(rt_device_t dev, rt_off_t pos, void* buffer, rt_
     uint8_t *p;
     uint8_t i;
 
-    p = (uint8_t*)(FLASH_OFFSET + pos * SectorCnt);
-    //rt_kprintf("r pos:%d size:%d\r\n", pos, size);
-    rt_memcpy(buffer, p, size * SectorCnt);
+    rt_mutex_take(mutex, RT_WAITING_FOREVER);
 
+    p = (uint8_t*)(StartAddr + pos * SectorSize);
+    rt_memcpy(buffer, p, size * SectorSize);
+
+    rt_mutex_release(mutex);
+    
 	return size;
 }
 
@@ -62,17 +68,20 @@ static rt_size_t rt_dflash_write (rt_device_t dev, rt_off_t pos, const void* buf
     int i;
     uint8_t *p;
     
-    p = (uint8_t*)(FLASH_OFFSET + pos * SectorCnt);
-    //rt_kprintf("w pos:%d size:%d\r\n", pos, size);
+    rt_mutex_take(mutex, RT_WAITING_FOREVER);
+
+    p = (uint8_t*)(StartAddr + pos * SectorSize);
     for(i=0;i<size;i++)
     {
         __disable_irq();
         FLASH_EraseSector((uint32_t)p);
-        FLASH_WriteSector((uint32_t)p, buffer, SectorCnt);
+        FLASH_WriteSector((uint32_t)p, buffer, SectorSize);
         __enable_irq();
-        p += SectorCnt;
+        p += SectorSize;
     }
-        
+       
+    rt_mutex_release(mutex);
+    
     return size;
 }
 
@@ -83,10 +92,10 @@ static rt_err_t rt_dflash_control(rt_device_t dev, rt_uint8_t cmd, void *args)
 	switch (cmd)
 	{
         case RT_DEVICE_CTRL_BLK_GETGEOME:
-            geometry.block_size = SectorCnt;
-            geometry.bytes_per_sector = SectorCnt;
+            geometry.block_size = SectorSize;
+            geometry.bytes_per_sector = SectorSize;
         
-            geometry.sector_count = UDISK_SIZE/SectorCnt;
+            geometry.sector_count = DiskSize/SectorSize;
             rt_memcpy(args, &geometry, sizeof(struct rt_device_blk_geometry));
 //            rt_kprintf("size:%d\r\n", geometry.sector_count);
 		break;

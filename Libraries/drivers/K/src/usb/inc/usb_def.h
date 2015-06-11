@@ -16,7 +16,9 @@
 #ifndef __USB_DEF_H__
 #define __USB_DEF_H__
 
+#ifdef __CC_ARM
 #pragma anon_unions
+#endif
 
 #define __task          __declspec(noreturn)
 #define __used          __attribute__((used))

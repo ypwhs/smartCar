@@ -15,6 +15,12 @@
 #include "common.h"
 #include "i2c.h"
 
+/* BMP180 control values and cmd*/
+#define BMP180_T_MEASURE                0x2E /* temperature measurement */
+#define BMP180_P0_MEASURE               0x34 /* pressure measurement (OSS=0, 4.5ms) */
+#define BMP180_P1_MEASURE               0x74 /* pressure measurement (OSS=1, 7.5ms) */
+#define BMP180_P2_MEASURE               0xB4 /* pressure measurement (OSS=2, 13.5ms) */
+#define BMP180_P3_MEASURE               0xF4 /* pressure measurement (OSS=3, 25.5ms) */
 
 
 #ifndef ARRAY_SIZE
@@ -86,7 +92,6 @@ static struct bmp180_cal cal;
  */
 static int dump_calibration_data(void)
 {
-    
     I2C_BurstRead(bmp_dev.instance, bmp_dev.addr, BMP180_PROM_START_ADDR, 1, (uint8_t*)&cal, BMP180_PROM_DATA_LEN);
 
     cal.AC1 = SWAP16(cal.AC1);
@@ -140,6 +145,7 @@ int bmp180_init(uint32_t instance)
             if(id == 0x55)
             {
                 bmp_dev.addr = bmp_addr[i];
+                LIB_TRACE("BMP180 addr:0x%X\r\n", bmp_dev.addr);
                 dump_calibration_data();
                 return 0;     
             }
@@ -212,7 +218,7 @@ static int read_raw_pressure(int32_t * data, uint8_t *oss)
  * @param pointer of the bmp180 device struct
  * @retval 1:busy 0:idle
  */
-int is_conversion_busy(void)
+static int is_conversion_busy(void)
 {
     uint8_t reg1;
     read_reg(BMP180_CTRL_MEAS_REG, &reg1);
@@ -231,15 +237,11 @@ int is_conversion_busy(void)
  * @param pointer of the bmp180 device struct
  * @param pointer of temperature, in 10x, eg:156 = 15.6C
  */
-int bmp180_read_temperature(int32_t * temperature)
+static int bmp180_read_temperature(int32_t * temperature)
 {
     int32_t raw_temperature;
     int32_t x1, x2;
 
-    if(is_conversion_busy())
-    {
-        return 1;
-    }
     if(read_raw_temperature(&raw_temperature))
     {
         return 2;
@@ -267,14 +269,10 @@ int bmp180_read_temperature(int32_t * temperature)
  * @param pointer of the bmp180 device struct
  * @param pointer of pressure, in pa
  */
-int bmp180_read_pressure(int32_t * pressure)
+static int bmp180_read_pressure(int32_t * pressure)
 {
     int32_t raw_pressure;
     uint8_t oss;
-    if(is_conversion_busy())
-    {
-        return 1;
-    }
     /* read raw pressure */
     if(read_raw_pressure(&raw_pressure, &oss))
     {
@@ -316,7 +314,59 @@ int bmp180_read_pressure(int32_t * pressure)
 
 int bmp180_pressure2altitude(int32_t pressure, int32_t *altitude)
 {
-	*altitude =(int32_t)(44330.0 * (1.0-pow((double)(pressure) / 101325.0, 1.0/5.255)) );
+    float fpressure;
+    fpressure = (float)pressure;
+	*altitude =44330 * (1.0 - pow(pressure /(float)101500,0.1903));
 	return 0;
+}
+
+
+#define T_START          (1<<0)
+#define T_COMPLETE       (1<<1)
+#define P_START          (1<<2)
+#define P_COMPLETE       (1<<3)
+#define T_WAIT           (1<<4)
+#define P_WAIT           (1<<5)
+
+int bmp180_conversion_process(int32_t *pressure, int32_t *temperature)
+{
+    int ret;
+    static int states = T_START;
+    
+    ret = 1;
+    
+    switch(states)
+    {
+        case T_START:
+            bmp180_start_conversion(BMP180_T_MEASURE);
+            states = T_WAIT;
+            break;
+        case T_WAIT:
+            if(!is_conversion_busy())
+            {
+                states = T_COMPLETE;
+            }
+            break;
+        case T_COMPLETE:
+            bmp180_read_temperature(temperature);
+            states = P_START;
+            break;
+        case P_START:
+            bmp180_start_conversion(BMP180_P3_MEASURE);
+            states = P_WAIT;
+            break;
+        case P_WAIT:
+            if(!is_conversion_busy())
+            {
+                states = P_COMPLETE;
+            }
+            break;
+        case P_COMPLETE:
+            bmp180_read_pressure(pressure);
+            states = T_START;
+            ret = 0;
+            break; 
+    }
+    return ret;
 }
 

@@ -11,13 +11,26 @@
  #include "dac.h"
  #include "common.h"
  #if defined(DAC0)
+ 
+#if (!defined(DAC_BASES))
+
+#ifdef DAC0
+#define DAC_BASES   {DAC0}
+#elif  DAC1
+#define DAC_BASES   {DAC0, DAC1}
+#endif
+
+#endif
+ 
  /* global vars */
 static DAC_Type * const DAC_InstanceTable[] = DAC_BASES;
 static DAC_CallBackType DAC_CallBackTable[ARRAY_SIZE(DAC_InstanceTable)] = {NULL};
 static const IRQn_Type DAC_IRQnTable[] = 
 {
     DAC0_IRQn,
+#ifdef DAC1
     DAC1_IRQn,
+#endif
 };
 
 /**

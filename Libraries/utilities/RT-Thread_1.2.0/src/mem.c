@@ -510,8 +510,8 @@ void rt_free(void *rmem)
     if (rmem == RT_NULL)
         return;
     RT_ASSERT((((rt_uint32_t)rmem) & (RT_ALIGN_SIZE-1)) == 0);
-//    RT_ASSERT((rt_uint8_t *)rmem >= (rt_uint8_t *)heap_ptr &&
-//              (rt_uint8_t *)rmem < (rt_uint8_t *)heap_end);
+    RT_ASSERT((rt_uint8_t *)rmem >= (rt_uint8_t *)heap_ptr &&
+              (rt_uint8_t *)rmem < (rt_uint8_t *)heap_end);
 
     RT_OBJECT_HOOK_CALL(rt_free_hook, (rmem));
 

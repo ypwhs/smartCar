@@ -1,6 +1,8 @@
 #include <stdint.h>
-#include "drv_i2c_bit_ops.h"
-#include "drv_at24cxx.h"
+#include <rtthread.h>
+
+#include "drivers/i2c.h"
+#include "rtt_drv.h"
 
 
 #ifdef AT24CXX_DEBUG

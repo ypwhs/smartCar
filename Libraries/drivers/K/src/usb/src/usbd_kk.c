@@ -20,6 +20,18 @@
 #define __NO_USB_LIB_C
 #include "usb_config.h"
 
+#if defined(RTT)
+#include <rtthread.h>
+extern rt_mq_t msd_mq;
+    
+typedef struct
+{
+    uint8_t flag;
+    uint8_t ep;
+    void (*exec)(uint8_t flag);
+}msd_msg_t;
+
+#endif
 
 typedef struct __BUF_DESC {
   uint8_t    stat;
@@ -28,7 +40,14 @@ typedef struct __BUF_DESC {
   uint32_t   buf_addr;
 }BUF_DESC;
 
+#ifdef __CC_ARM
 BUF_DESC __align(512) BD[(USBD_EP_NUM + 1) * 2 * 2];
+#elif __ICCARM__
+#pragma data_alignment=512
+BUF_DESC  BD[(USBD_EP_NUM + 1) * 2 * 2];
+#endif
+
+
 uint8_t EPBuf[(USBD_EP_NUM + 1)* 2 * 2][64];
 uint8_t OutEpSize[USBD_EP_NUM + 1];
 
@@ -52,9 +71,11 @@ uint32_t Data1  = 0x55555555;
 #define OUT_TOKEN      0x01
 #define TOK_PID(idx)   ((BD[idx].stat >> 2) & 0x0F)
 
-__inline static void protected_and (uint32_t *addr, uint32_t val) { while(__strex((__ldrex(addr) & val),addr)); }
-__inline static void protected_or  (uint32_t *addr, uint32_t val) { while(__strex((__ldrex(addr) | val),addr)); }
-__inline static void protected_xor (uint32_t *addr, uint32_t val) { while(__strex((__ldrex(addr) ^ val),addr)); }
+
+inline static void protected_and (uint32_t *addr, uint32_t val) { *addr = (*addr)&val; }
+inline static void protected_or  (uint32_t *addr, uint32_t val) { *addr = (*addr)|val; }
+inline static void protected_xor (uint32_t *addr, uint32_t val) { *addr = (*addr)^val; }
+
 
 /*
  *  USB Device Interrupt enable
@@ -75,7 +96,7 @@ void          USBD_IntrEna (void) {
 static int USB_SetClockDiv(uint32_t srcClock)
 {
     uint8_t frac,div;
-    
+#ifdef SIM_CLKDIV2_USBDIV
     /* clear all divivder */
     SIM->CLKDIV2 &= ~SIM_CLKDIV2_USBDIV_MASK;
     SIM->CLKDIV2 &= ~SIM_CLKDIV2_USBFRAC_MASK;
@@ -93,6 +114,9 @@ static int USB_SetClockDiv(uint32_t srcClock)
             }
         }
     }
+#else
+    return 0;
+#endif
     return 1;
 }
 
@@ -143,7 +167,9 @@ void USBD_Init (void) {
     SIM->SCGC4   |=   SIM_SCGC4_USBOTG_MASK;      
     
     /* disable memory protection */
+#ifdef MPU
     MPU->CESR=0;
+#endif
     
     USBD_IntrEna ();
 
@@ -640,35 +666,47 @@ void USB0_IRQHandler(void) {
     ev_odd = (stat >> 2) & 0x01;
     
 /* setup packet                                                               */
-    if ((num == 0) && (TOK_PID((IDX(num, dir, ev_odd))) == SETUP_TOKEN)) {
+if ((num == 0) && (TOK_PID((IDX(num, dir, ev_odd))) == SETUP_TOKEN))
+    {
+        Data1 &= ~0x02;
 
-      Data1 &= ~0x02;
-//     BD[IDX(0, TX, EVEN)].stat &= ~BD_OWN_MASK;
-//     BD[IDX(0, TX, ODD)].stat  &= ~BD_OWN_MASK;
-#ifdef __RTX
-        if (USBD_RTX_EPTask[num]) {
-          isr_evt_set(USBD_EVT_SETUP, USBD_RTX_EPTask[num]);
+    #ifdef __RTX
+        if (USBD_RTX_EPTask[num])
+        {
+            isr_evt_set(USBD_EVT_SETUP, USBD_RTX_EPTask[num]);
         }
-#else
-        if (USBD_P_EP[num]) {
-          USBD_P_EP[num](USBD_EVT_SETUP);
+    #else
+        if (USBD_P_EP[num])
+        {
+            USBD_P_EP[num](USBD_EVT_SETUP);
         }
-#endif
+    #endif
     }
-    else {
-
-/* OUT packet                                                                 */
-      if (TOK_PID((IDX(num, dir, ev_odd))) == OUT_TOKEN) {
-#ifdef __RTX
-        if (USBD_RTX_EPTask[num]) {
-          isr_evt_set(USBD_EVT_OUT, USBD_RTX_EPTask[num]);
+    else
+    {
+            /* OUT packet */
+        if (TOK_PID((IDX(num, dir, ev_odd))) == OUT_TOKEN)
+        {
+    #ifdef __RTX
+            if (USBD_RTX_EPTask[num])
+            {
+                isr_evt_set(USBD_EVT_OUT, USBD_RTX_EPTask[num]);
+            }
+    #else
+            if (USBD_P_EP[num])
+            {
+                #if defined(RTT)
+                msd_msg_t msg;
+                msg.ep = num;
+                msg.flag = USBD_EVT_OUT;
+                msg.exec = USBD_P_EP[num];
+                rt_mq_send(msd_mq, &msg, sizeof(msg));
+                #else
+                USBD_P_EP[num](USBD_EVT_OUT);
+                #endif
+            }
+    #endif
         }
-#else
-        if (USBD_P_EP[num]) {
-          USBD_P_EP[num](USBD_EVT_OUT);
-        }
-#endif
-      }
 
 /* IN packet                                                                  */
       if (TOK_PID((IDX(num, dir, ev_odd))) == IN_TOKEN) {
@@ -677,8 +715,17 @@ void USB0_IRQHandler(void) {
           isr_evt_set(USBD_EVT_IN,  USBD_RTX_EPTask[num]);
         }
 #else
-        if (USBD_P_EP[num]) {
-          USBD_P_EP[num](USBD_EVT_IN);
+        if (USBD_P_EP[num])
+        {
+            #if defined(RTT)
+            msd_msg_t msg;
+            msg.ep = num;
+            msg.flag = USBD_EVT_IN;
+            msg.exec = USBD_P_EP[num];
+            rt_mq_send(msd_mq, &msg, sizeof(msg));
+            #else
+            USBD_P_EP[num](USBD_EVT_IN);
+            #endif
         }
 #endif
       }

@@ -6750,7 +6750,7 @@ typedef struct {
 #define FTM1                                     ((FTM_Type *)FTM1_BASE)
 #define FTM1_BASE_PTR                            (FTM1)
 /** Peripheral FTM2 base address */
-#define FTM2_BASE                                (0x4003A000u)
+#define FTM2_BASE                                (0x400B8000u)
 /** Peripheral FTM2 base pointer */
 #define FTM2                                     ((FTM_Type *)FTM2_BASE)
 #define FTM2_BASE_PTR                            (FTM2)

@@ -14,7 +14,14 @@
 
 
 
-
+/* function return type */
+#define FLASH_OK                    0x00
+#define FLASH_OVERFLOW              0x01
+#define FLASH_BUSY                  0x02
+#define FLASH_ERROR                 0x04
+#define FLASH_TIMEOUT               0x08
+#define FLASH_NOT_ERASED            0x10
+#define FLASH_CONTENTERR            0x11
 
 //!< API declare
 void FLASH_Init(void);

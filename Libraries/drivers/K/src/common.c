@@ -67,6 +67,29 @@ int32_t CLOCK_GetClockFrequency(CLOCK_Source_Type clockName, uint32_t* Frequenct
 }
 
  /**
+ * @brief  ½øÈëµÍ¹¦ºÄÄ£Ê½
+ * @param  enSleepOnExit:ÔÚÏµÍ³»½ĞÑÊ±ºò ÊÇ·ñ¼ÌĞø½øÈëµÍ¹¦ºÄ
+ * @retval 0: ³É¹¦ ·Ç0: ´íÎó
+ * @note  ÈÎºÎÖĞ¶Ï ¶¼¿ÉÒÔ»½ĞÑCPU
+ */
+void EnterSTOPMode(bool enSleepOnExit)
+{
+    /* Set the SLEEPDEEP bit to enable deep sleep mode (STOP) */
+    SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
+    if (enSleepOnExit)
+    {
+        SCB->SCR |= SCB_SCR_SLEEPONEXIT_Msk;
+    }
+    else
+    {
+        SCB->SCR &= ~SCB_SCR_SLEEPONEXIT_Msk;
+    }
+    
+    /* WFI instruction will start entry into STOP mode */
+    __ASM("WFI");
+}
+
+ /**
  * @brief  ±àÂë¿ìËÙ³õÊ¼»¯½á¹¹ ÓÃ»§²»Ğèµ÷ÓÃ
  *
  * @param  type: ¿ìËÙ³õÊ¼»¯½á¹¹ÌåÖ¸Õë
@@ -197,12 +220,14 @@ void NMI_Handler(void)
 void HardFault_Handler(void)
 {
     printf("HardFault_Handler\r\n");
+      __asm("BKPT #0x03"); 
     while(1);
 }
 
 void BusFault_Handler(void)
 {
     printf("BusFault_Handler\r\n");
+      __asm("BKPT #0x03"); 
     while(1);
 }
 

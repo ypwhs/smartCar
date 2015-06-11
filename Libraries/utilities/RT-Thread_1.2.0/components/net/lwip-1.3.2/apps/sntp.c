@@ -62,7 +62,7 @@ void rtt_set_sys_time(rt_uint32_t t)
  * SNTP_DEBUG: Enable debugging for SNTP.
  */
 #ifndef SNTP_DEBUG
-#define SNTP_DEBUG                  LWIP_DBG_OFF
+#define SNTP_DEBUG                  LWIP_DBG_ON
 #endif
 
 /** SNTP server port */

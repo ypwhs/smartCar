@@ -1007,39 +1007,11 @@ void USBD_MSC_EP_BULKOUT_Event (U32 event) {
  *    Return Value:    None
  */
 
-#if defined(RTT)
-#include <rtthread.h>
-extern rt_mq_t msd_mq;
-    
-typedef struct
-{
-    uint8_t dir;
-    int cmd;
-    U32 block;
-    U8 *buf;
-    U32 num_of_blocks;
-}msd_msg_t;
-
-#endif
 
 void USBD_MSC_EP_BULK_Event (U32 event)
 {
-#if defined(RTT)
-    msd_msg_t msg;
-    if(event & USBD_EVT_OUT)
-    {
-        msg.dir = 0;
-    }
-    if(event & USBD_EVT_IN)
-    {
-        msg.dir = 1;
-    }
-    rt_mq_send(msd_mq, &msg, sizeof(msg));
-    
-#else
     if (event & USBD_EVT_OUT) USBD_MSC_EP_BULKOUT_Event (0);
     if (event & USBD_EVT_IN) USBD_MSC_EP_BULKIN_Event (0);
-#endif
 }
 
 

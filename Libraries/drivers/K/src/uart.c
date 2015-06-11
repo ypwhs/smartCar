@@ -76,6 +76,11 @@ static const IRQn_Type UART_IRQnTable[] =
 
 static const uint32_t UART_TIFOSizeTable[] = {1, 4, 8, 16, 32, 64, 128};
 
+#ifdef __cplusplus
+ extern "C" {
+#endif
+     
+     
 #ifdef __CC_ARM // MDK Support
 struct __FILE 
 { 
@@ -99,6 +104,12 @@ __weak int fgetc(FILE *f)
     while(UART_ReadByte(UART_DebugInstance, &ch));
     return (ch & 0xFF);
 }
+
+#ifdef __cplusplus
+}
+#endif
+
+
 #elif __ICCARM__ /* IAR support */
 __weak size_t __write(int handle, const unsigned char * buffer, size_t size)
 {

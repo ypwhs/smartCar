@@ -21,6 +21,7 @@
 #define HW_PIT_CH0   (0x00U)
 #define HW_PIT_CH1   (0x01U)
 
+     
 //!< PIT CallBack Type
 typedef void (*PIT_CallBackType)(void);
 

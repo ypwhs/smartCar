@@ -6,9 +6,11 @@
 #include "uart.h"
 #include "lptmr.h"
 
+#define offset 77;
 void turn(int angel){
-    int pwm = (int)((angel/90.0 + 1.5) * 500);  //90度是1.5ms
-    printf("SET:%d\r\n", pwm);
+    angel += offset;
+    int pwm = (int)((angel/90.0 + 0.5) * 500);  //90度是1.5ms
+    printf("turn:%d\r\n", pwm);
     FTM_PWM_ChangeDuty(HW_FTM1, HW_FTM_CH0, pwm);
 }
 
@@ -33,7 +35,7 @@ void initDriver(){
     //使能INH
 
     FTM_PWM_QuickInit(FTM1_CH0_PA12, kPWM_EdgeAligned, 50);     //设置FTM，边沿对齐模式
-    turn(90);
+    turn(0);
     //初始化舵机
 
     FTM_PWM_QuickInit(FTM0_CH0_PC01, kPWM_EdgeAligned, DRIVER_PWM_WIDTH);
@@ -72,6 +74,7 @@ void delay(){
 
 #define spd 1000
 //串口接收中断
+
 void UART_RX_ISR(uint16_t byteRec){
     PCout(3)=!PCout(3);
     switch(byteRec){
@@ -84,13 +87,13 @@ void UART_RX_ISR(uint16_t byteRec){
         setRightSpeed(-spd);
         break;
     case 'a':
-        turn(0);
+        turn(-30);
         break;
     case 'd':
-        turn(180);
+        turn(30);
         break;
     case 'x':
-        turn(90);
+        turn(0);
         break;
     default:
         setLeftSpeed(0);
@@ -125,14 +128,8 @@ int main(void)
     initUART();
     initDriver();
 
-    /* 快速初始化 LPTMR模块用作脉冲计数功能 */
-    LPTMR_PC_QuickInit(LPTMR_ALT2_PC05); /* 脉冲计数 */
-
     while(1)
     {
-        uint32_t value;
-        value = LPTMR_PC_ReadCounter(); //获得LPTMR模块的计数值
-        printf("LPTMR:%d\r\n", value);
         PDout(10)=!PDout(10);
         DelayMs(100);
     }

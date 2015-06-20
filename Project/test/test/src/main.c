@@ -7,9 +7,9 @@
 #include "lptmr.h"
 
 void turn(int angel){
-    int pwm = (int)((angel/90.0 + 1.5) * 500);  //90度是1.5ms，0度是1ms，180度是2ms
+    int pwm = (int)((angel/90.0 + 1.5) * 500);  //90度是1.5ms
     printf("SET:%d\r\n", pwm);
-    FTM_PWM_ChangeDuty(HW_FTM0, HW_FTM_CH5, pwm);
+    FTM_PWM_ChangeDuty(HW_FTM1, HW_FTM_CH0, pwm);
 }
 
 #define DRIVER_PWM_WIDTH 100
@@ -32,7 +32,7 @@ void initDriver(){
     PCout(0)=1;
     //使能INH
 
-    FTM_PWM_QuickInit(FTM0_CH5_PD05, kPWM_EdgeAligned, DRIVER_PWM_WIDTH);     //设置FTM，边沿对齐模式
+    FTM_PWM_QuickInit(FTM1_CH0_PA12, kPWM_EdgeAligned, 50);     //设置FTM，边沿对齐模式
     turn(90);
     //初始化舵机
 
@@ -42,7 +42,6 @@ void initDriver(){
     FTM_PWM_QuickInit(FTM0_CH3_PC04, kPWM_EdgeAligned, DRIVER_PWM_WIDTH);
     //初始化电机PWM输出
 }
-
 
 void setLeftSpeed(int spd){
     if(spd>0){

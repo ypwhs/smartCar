@@ -139,5 +139,3 @@ void PORT_PinPassiveFilterConfig(uint32_t instance, uint8_t pin, FunctionalState
 #endif
 
 #endif
-
-

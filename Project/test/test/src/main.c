@@ -192,20 +192,60 @@ void initCamera(){
 // IMG
 uint8_t gIMG[OV7620_W][OV7620_H];   //使用内部RAM
 
-void findCenter(){
+void findLine(){
     for(int y=0;y<OV7620_H;y++){
-        int center = 0;
-        int sum = 0;
         for(int x=0;x<OV7620_W;x++){
-            if(gIMG[x][y]){
-                center += x;
-                sum ++;
+            if(gIMG[x][y]==0 && gIMG[x+1][y]){
+                x++;continue;
+            }
+            if(gIMG[x][y]&&gIMG[x+1][y]){
+                gIMG[x][y]=0;
             }
         }
-        center /= sum;
-        gIMG[center][y] = 1;
     }
 }
+
+void findCenter(){
+    
+    int center=30;
+    int sum=0;
+    int yfirst = 2;
+//    while(sum != 2)
+//    {
+//        center=0;
+//        sum=0;
+//        for(int x=0;x<OV7620_W;x++){
+//            if(gIMG[x][OV7620_H-yfirst]){
+//                center += x;
+//                sum ++;
+//            }
+//        }
+//        if(sum == 2){
+//          center /= sum;
+//          gIMG[center][OV7620_H-yfirst] = 1;
+//        }else{
+//            for(int x=0;x<OV7620_W;x++)
+//                gIMG[x][OV7620_H-1]=0;
+//            yfirst++;
+//        }
+//    }
+    
+    int left, right;
+    
+    for(int y=OV7620_H-yfirst;y>=0;y--){
+        for(left = center;left>0;left--)
+            if(gIMG[left][y])break;
+        for(right = center;right<OV7620_W;right++)
+            if(gIMG[right][y])break;
+        //if(left!=0 && (right != OV7620_W))
+            center = (left+right)/2;
+        for(int x=0;x<OV7620_W;x++)
+                gIMG[x][y]=0;
+        gIMG[center][y]=1;
+    }
+}
+
+bool printflag = false;
 
 /* 接收完成一场后 用户处理函数 */
 static void UserApp(uint32_t vcount)
@@ -216,15 +256,27 @@ static void UserApp(uint32_t vcount)
                 gIMG[x*8+i][y] = (gpHREF[y][x+1]>>(7-i))%2;
     //将图片从OV7620_H*OV7620_W/8映射到OV7620_H*OV7620_W
 
+    findLine();
     findCenter();
     
-    for(int y=0;y<(OV7620_H)/8;y++){
+    if(printflag){
+        printflag = false;
+        for(int y=0;y<OV7620_H-1;y++){
+             for(int x=0;x<OV7620_W;x++){
+                printf("%d",gIMG[x][y]);
+            }
+            printf("\r\n");
+        }
+        printf("\r\n");
+    }
+    
+    for(int y=0;y<8;y++){
         LED_WrCmd(0xb0 + y); //0xb0+0~7表示页0~7
         LED_WrCmd(0x00); //0x00+0~16表示将128列分成16组其地址在某组中的第几列
         LED_WrCmd(0x10); //0x10+0~16表示将128列分成16组其地址所在第几组
-        for(int x=0;x<OV7620_W;x++){
+        for(int x=0;x<80;x++){
             uint8_t data = 0;
-            for(int i=0;i<8 && y+i<OV7620_H ;i++)
+            for(int i=0;i<8 && y*8+i<OV7620_H ;i++)
                 data += gIMG[x][y*8+i]<<(i);
             LED_WrDat(data);
         }
@@ -234,13 +286,8 @@ static void UserApp(uint32_t vcount)
 //串口接收中断
 void UART_RX_ISR(uint16_t byteRec){
     //打印整个图像
-    for(int y=0;y<OV7620_H-1;y++){
-        for(int x=0;x<OV7620_W;x++){
-            printf("%d",gIMG[x][y]);
-        }
-        printf("\r\n");
-    }
-    printf("\r\n");
+    printflag = true;
+
 }
 
 int main(void)

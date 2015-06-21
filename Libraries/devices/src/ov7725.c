@@ -223,7 +223,7 @@ static const struct ov7725_reg reg_tbl[] =
     {OV7725_BDMStep      , 0x03},
     {OV7725_SDE          , 0x04},
     {OV7725_BRIGHT       , 0x00},
-    {OV7725_CNST         , 70},
+    {OV7725_CNST         , 25},
     {OV7725_SIGN         , 0x06},
     {OV7725_UVADJ0       , 0x11},
     {OV7725_UVADJ1       , 0x02},

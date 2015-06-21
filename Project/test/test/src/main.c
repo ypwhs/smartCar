@@ -189,14 +189,6 @@ void initCamera(){
     DMA_Init(&DMA_InitStruct1);
 }
 
-void printBin(uint8_t data){
-    int i;
-    for(i=7;i>=0;i--){
-        //高位在前,低位在后
-        printf("%c", (data>>i)%2>0?'*':'.');
-    }
-}
-
 // IMG
 uint8_t gIMG[OV7620_W][OV7620_H];   //使用内部RAM
 

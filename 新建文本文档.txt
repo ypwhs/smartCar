@@ -1,0 +1,11 @@
+C/C++ Compliter - Preprocessor
+
+$PROJ_DIR$\..\..\..\..\Libraries\drivers\K\inc
+$PROJ_DIR$\..\..\..\..\Libraries\devices\inc
+$PROJ_DIR$\..\..\..\..\Libraries\startup\CoreSupport
+$PROJ_DIR$\..\..\..\..\Libraries\startup\DeviceSupport\IAR-ARM
+$PROJ_DIR$\..\..\..\..\Libraries\startup\DeviceSupport
+$PROJ_DIR$\
+
+MK60D10
+DEBUG

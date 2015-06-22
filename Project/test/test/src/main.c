@@ -8,6 +8,58 @@
 
 #include "oled_spi.h"
 
+#include "ftm.h"
+#include "lptmr.h"
+
+
+#define offset 77
+void turn(int angel){
+    angel += offset;
+    int pwm = (int)((angel/90.0 + 0.5) * 500);  //90度是1.5ms
+    printf("turn:%d\r\n", pwm);
+    FTM_PWM_ChangeDuty(HW_FTM1, HW_FTM_CH0, pwm);
+}
+
+#define DRIVER_PWM_WIDTH 1000
+void initDriver(){
+    printf("initPWM\r\n");
+
+    for(int i=0;i<0;i++)
+        GPIO_QuickInit(HW_GPIOC, i, kGPIO_Mode_OPP);
+    PCout(0)=1;
+    //使能INH
+
+    FTM_PWM_QuickInit(FTM1_CH0_PA12, kPWM_EdgeAligned, 50);     //设置FTM，边沿对齐模式
+    turn(0);
+    //初始化舵机
+
+    FTM_PWM_QuickInit(FTM0_CH0_PC01, kPWM_EdgeAligned, DRIVER_PWM_WIDTH);
+    FTM_PWM_QuickInit(FTM0_CH1_PC02, kPWM_EdgeAligned, DRIVER_PWM_WIDTH);
+    FTM_PWM_QuickInit(FTM0_CH2_PC03, kPWM_EdgeAligned, DRIVER_PWM_WIDTH);
+    FTM_PWM_QuickInit(FTM0_CH3_PC04, kPWM_EdgeAligned, DRIVER_PWM_WIDTH);
+    //初始化电机PWM输出
+    
+}
+
+void setSpeed(int spd){
+    if(spd>0){
+        FTM_PWM_ChangeDuty(HW_FTM0, HW_FTM_CH1, spd);
+        FTM_PWM_ChangeDuty(HW_FTM0, HW_FTM_CH0, 0);
+        
+        FTM_PWM_ChangeDuty(HW_FTM0, HW_FTM_CH2, spd);
+        FTM_PWM_ChangeDuty(HW_FTM0, HW_FTM_CH3, 0);
+    }else
+    {
+        FTM_PWM_ChangeDuty(HW_FTM0, HW_FTM_CH1, 0);
+        FTM_PWM_ChangeDuty(HW_FTM0, HW_FTM_CH0, -spd);
+        
+        FTM_PWM_ChangeDuty(HW_FTM0, HW_FTM_CH2, 0);
+        FTM_PWM_ChangeDuty(HW_FTM0, HW_FTM_CH3, -spd);
+    }
+}
+
+
+
 /* 请将I2C.H中的 I2C_GPIO_SIM 改为 1 */
 
 // 改变图像大小
@@ -204,45 +256,44 @@ void findLine(){
         }
     }
 }
-
+#define DELTA_MAX 5
+int dirsum;
 void findCenter(){
     
-    int center=30;
-    int sum=0;
-    int yfirst = 2;
-//    while(sum != 2)
-//    {
-//        center=0;
-//        sum=0;
-//        for(int x=0;x<OV7620_W;x++){
-//            if(gIMG[x][OV7620_H-yfirst]){
-//                center += x;
-//                sum ++;
-//            }
-//        }
-//        if(sum == 2){
-//          center /= sum;
-//          gIMG[center][OV7620_H-yfirst] = 1;
-//        }else{
-//            for(int x=0;x<OV7620_W;x++)
-//                gIMG[x][OV7620_H-1]=0;
-//            yfirst++;
-//        }
-//    }
-    
+    int center = 30;
+    int lastcenter = 30;
+    int delta = 0;
     int left, right;
+    int y;
     
-    for(int y=OV7620_H-yfirst;y>=0;y--){
-        for(left = center;left>0;left--)
+    dirsum = 0;
+    for(y=OV7620_H-2;y>0;y--){
+        for(left = lastcenter;left>0;left--)
             if(gIMG[left][y])break;
-        for(right = center;right<OV7620_W;right++)
+        for(right = lastcenter;right<OV7620_W;right++)
             if(gIMG[right][y])break;
-        //if(left!=0 && (right != OV7620_W))
-            center = (left+right)/2;
+        
+        center = (left+right)/2;
+        delta = center - lastcenter;
+
+        if(y!=OV7620_H-2){
+            if(delta>DELTA_MAX | delta<-DELTA_MAX){
+                for(int x=0;x<OV7620_W;x++)
+                    gIMG[x][y]=1;
+                break;
+            }else dirsum += delta;
+            printf("%d\r\n",delta);
+            
+        }
+        lastcenter = center;
         for(int x=0;x<OV7620_W;x++)
                 gIMG[x][y]=0;
         gIMG[center][y]=1;
     }
+    
+    
+    printf("\r\n");
+    
 }
 
 bool printflag = false;
@@ -281,6 +332,11 @@ static void UserApp(uint32_t vcount)
             LED_WrDat(data);
         }
     }
+    
+    char buf[20] = {0};
+    sprintf(buf, "s=%d ", dirsum);
+    LED_P8x16Str(80, 0, buf);
+    turn(dirsum);
 }
 
 //串口接收中断
@@ -304,8 +360,11 @@ int main(void)
     /* 开启UART Rx中断 */
     UART_ITDMAConfig(HW_UART0, kUART_IT_Rx, true);
 
+    initDriver();
+    setSpeed(0);
     initOLED();
     initCamera();
+    
 
     while(1)
     {

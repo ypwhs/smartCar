@@ -3,10 +3,9 @@
 #include "uart.h"
 #include "dma.h"
 #include "ftm.h"
-#include "uart.h"
 #include "lptmr.h"
 
-#define offset 77;
+#define offset 77
 void turn(int angel){
     angel += offset;
     int pwm = (int)((angel/90.0 + 0.5) * 500);  //90度是1.5ms
@@ -14,23 +13,12 @@ void turn(int angel){
     FTM_PWM_ChangeDuty(HW_FTM1, HW_FTM_CH0, pwm);
 }
 
-#define DRIVER_PWM_WIDTH 100
+#define DRIVER_PWM_WIDTH 1000
 void initDriver(){
     printf("initPWM\r\n");
 
     for(int i=0;i<0;i++)
         GPIO_QuickInit(HW_GPIOC, i, kGPIO_Mode_OPP);
-    //初始化所有引脚为输出，其中
-    /*
-        C0----INH
-        C1----OUT1
-        C2----OUT2
-        C3----OUT3
-        C4----OUT4
-        C5----LED1
-        C6----LED2
-        C7----LED3
-    */
     PCout(0)=1;
     //使能INH
 

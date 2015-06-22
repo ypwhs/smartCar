@@ -24,8 +24,8 @@ void turn(int angel){
 void initDriver(){
     printf("initPWM\r\n");
 
-    for(int i=0;i<0;i++)
-        GPIO_QuickInit(HW_GPIOC, i, kGPIO_Mode_OPP);
+    //for(int i=0;i<0;i++)
+    GPIO_QuickInit(HW_GPIOC, 0, kGPIO_Mode_OPP);
     PCout(0)=1;
     //使能INH
 
@@ -258,6 +258,7 @@ void findLine(){
 }
 #define DELTA_MAX 5
 int dirsum;
+int average;
 void findCenter(){
     
     int center = 30;
@@ -267,6 +268,9 @@ void findCenter(){
     int y;
     
     dirsum = 0;
+    average = 0;
+    int sum = 0;
+    
     for(y=OV7620_H-2;y>0;y--){
         for(left = lastcenter;left>0;left--)
             if(gIMG[left][y])break;
@@ -281,8 +285,12 @@ void findCenter(){
                 for(int x=0;x<OV7620_W;x++)
                     gIMG[x][y]=1;
                 break;
-            }else dirsum += delta;
-            printf("%d\r\n",delta);
+            }else {
+                dirsum += delta;
+                average += center;
+                sum ++;
+            }
+            //printf("%d\r\n",delta);
             
         }
         lastcenter = center;
@@ -292,7 +300,20 @@ void findCenter(){
     }
     
     
-    printf("\r\n");
+    
+    if(sum < 10){
+        setSpeed(0);
+        turn(0);
+        DelayMs(1000);
+    }else {
+        average /= sum;
+        setSpeed(2000);
+        turn(average-38);
+    }
+    
+    
+    
+    //printf("\r\n");
     
 }
 
@@ -336,7 +357,10 @@ static void UserApp(uint32_t vcount)
     char buf[20] = {0};
     sprintf(buf, "s=%d ", dirsum);
     LED_P8x16Str(80, 0, buf);
-    turn(dirsum);
+    
+    sprintf(buf, "a=%d ", average);
+    LED_P8x16Str(80, 1, buf);
+    
 }
 
 //串口接收中断
@@ -361,7 +385,7 @@ int main(void)
     UART_ITDMAConfig(HW_UART0, kUART_IT_Rx, true);
 
     initDriver();
-    setSpeed(0);
+    setSpeed(2000);
     initOLED();
     initCamera();
     

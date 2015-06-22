@@ -256,9 +256,13 @@ void findLine(){
         }
     }
 }
-#define DELTA_MAX 5
-int dirsum;
+
+#define DELTA_MAX 3
+int weijifen;
 int average;
+#define LOWSPEED 1500
+#define PSPEED 50
+
 void findCenter(){
     
     int center = 30;
@@ -267,7 +271,7 @@ void findCenter(){
     int left, right;
     int y;
     
-    dirsum = 0;
+    weijifen = 0;
     average = 0;
     int sum = 0;
     
@@ -286,7 +290,7 @@ void findCenter(){
                     gIMG[x][y]=1;
                 break;
             }else {
-                dirsum += delta;
+                weijifen += delta;
                 average += center;
                 sum ++;
             }
@@ -303,12 +307,12 @@ void findCenter(){
     
     if(sum < 10){
         setSpeed(0);
-        turn(0);
-        DelayMs(1000);
+        //turn(0);
+        DelayMs(500);
     }else {
         average /= sum;
-        setSpeed(2000);
-        turn(average-38);
+        setSpeed(LOWSPEED+(30-abs(weijifen))*PSPEED);
+        turn(average-40);
     }
     
     
@@ -355,7 +359,7 @@ static void UserApp(uint32_t vcount)
     }
     
     char buf[20] = {0};
-    sprintf(buf, "s=%d ", dirsum);
+    sprintf(buf, "s=%d ", weijifen);
     LED_P8x16Str(80, 0, buf);
     
     sprintf(buf, "a=%d ", average);

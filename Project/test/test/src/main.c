@@ -21,6 +21,7 @@ void turn(int angel){
 }
 
 #define DRIVER_PWM_WIDTH 1000
+void setSpeed(int spd);
 void initDriver(){
     printf("initPWM\r\n");
 
@@ -38,7 +39,7 @@ void initDriver(){
     FTM_PWM_QuickInit(FTM0_CH2_PC03, kPWM_EdgeAligned, DRIVER_PWM_WIDTH);
     FTM_PWM_QuickInit(FTM0_CH3_PC04, kPWM_EdgeAligned, DRIVER_PWM_WIDTH);
     //初始化电机PWM输出
-    
+    setSpeed(0);
 }
 
 void setSpeed(int spd){
@@ -245,74 +246,76 @@ void initCamera(){
 uint8_t gIMG[OV7620_W][OV7620_H];   //使用内部RAM
 
 void findLine(){
-    for(int y=0;y<OV7620_H;y++){
-        for(int x=0;x<OV7620_W;x++){
-            if(gIMG[x][y]==0 && gIMG[x+1][y]){
-                x++;continue;
-            }
-            if(gIMG[x][y]&&gIMG[x+1][y]){
-                gIMG[x][y]=0;
-            }
+    int y;
+    int x;
+    for(y=0;y<OV7620_H-1;y++){
+        for(x=0;x<OV7620_W-1;x++){
+            gIMG[x][y] ^= gIMG[x+1][y];
         }
+        gIMG[x][y]=0;
     }
 }
 
 #define DELTA_MAX 3
-int weijifen;
 int average;
+int sum;
 #define LOWSPEED 1500
-#define PSPEED 50
+#define PSPEED 30
+
+int centers[OV7620_H] = {0};
 
 void findCenter(){
     
-    int center = 30;
-    int lastcenter = 30;
-    int delta = 0;
+    int center = OV7620_W/2;
+    int lastcenter = OV7620_W/2;
     int left, right;
     int y;
     
-    weijifen = 0;
     average = 0;
-    int sum = 0;
+    sum=0;
+    int error = 0;
     
     for(y=OV7620_H-2;y>0;y--){
         for(left = lastcenter;left>0;left--)
             if(gIMG[left][y])break;
+        //寻找左边缘
         for(right = lastcenter;right<OV7620_W;right++)
             if(gIMG[right][y])break;
+        //寻找右边缘
         
         center = (left+right)/2;
-        delta = center - lastcenter;
+        int delta = lastcenter - center; //当前斜率
 
-        if(y!=OV7620_H-2){
+        if(y != OV7620_H-2){
             if(delta>DELTA_MAX | delta<-DELTA_MAX){
-                for(int x=0;x<OV7620_W;x++)
-                    gIMG[x][y]=1;
+//                for(int x=0;x<OV7620_W;x++)
+//                    gIMG[x][y]=1;
+                //画一条截止线
+                error ++;
+                if(error>3)
                 break;
             }else {
-                weijifen += delta;
                 average += center;
+                centers[y]=center;
                 sum ++;
             }
-            //printf("%d\r\n",delta);
-            
         }
         lastcenter = center;
-        for(int x=0;x<OV7620_W;x++)
-                gIMG[x][y]=0;
+//        for(int x=0;x<OV7620_W;x++)
+//                gIMG[x][y]=0;
         gIMG[center][y]=1;
     }
     
-    
+    for(;y>0;y--)centers[y]=0;
+    average /= sum;
     
     if(sum < 10){
         setSpeed(0);
-        //turn(0);
+        turn(0);
         DelayMs(500);
     }else {
-        average /= sum;
-        setSpeed(LOWSPEED+(30-abs(weijifen))*PSPEED);
-        turn(average-40);
+        setSpeed(LOWSPEED+(30-abs(average-44))*PSPEED);
+        turn((average-44)*1);
     }
     
     
@@ -332,20 +335,31 @@ static void UserApp(uint32_t vcount)
                 gIMG[x*8+i][y] = (gpHREF[y][x+1]>>(7-i))%2;
     //将图片从OV7620_H*OV7620_W/8映射到OV7620_H*OV7620_W
 
-    findLine();
+    //findLine();
     findCenter();
     
     if(printflag){
         printflag = false;
+        //打印出图像边缘
         for(int y=0;y<OV7620_H-1;y++){
              for(int x=0;x<OV7620_W;x++){
-                printf("%d",gIMG[x][y]);
+                 if(gIMG[x][y]){
+                     printf("%c%c\r\n",x,y);
+                 }
             }
-            printf("\r\n");
         }
-        printf("\r\n");
+        
+        //打印出中心线
+//        for(int y=0;y<OV7620_H-1;y++){
+//            if(centers[y]!=0){
+//                printf("%c%c\r\n",centers[y],y);
+//                //DelayMs(4);
+//            }
+//        }
     }
     
+    
+    //打印到屏幕上
     for(int y=0;y<8;y++){
         LED_WrCmd(0xb0 + y); //0xb0+0~7表示页0~7
         LED_WrCmd(0x00); //0x00+0~16表示将128列分成16组其地址在某组中的第几列
@@ -359,28 +373,25 @@ static void UserApp(uint32_t vcount)
     }
     
     char buf[20] = {0};
-    sprintf(buf, "s=%d ", weijifen);
-    LED_P8x16Str(80, 0, buf);
-    
     sprintf(buf, "a=%d ", average);
-    LED_P8x16Str(80, 1, buf);
+    LED_P8x16Str(80, 0, buf);
     
 }
 
 //串口接收中断
 void UART_RX_ISR(uint16_t byteRec){
     //打印整个图像
-    printflag = true;
+    if(byteRec == ' ')printflag = true;
 
 }
 
 int main(void)
 {
-
+    
     DelayInit();
     /* 打印串口及小灯 */
-
-    GPIO_QuickInit(HW_GPIOC, 3, kGPIO_Mode_OPP);
+    
+    GPIO_QuickInit(HW_GPIOD, 10, kGPIO_Mode_OPP);
     UART_QuickInit(UART0_RX_PB16_TX_PB17, 115200);
     /* 注册中断回调函数 */
     UART_CallbackRxInstall(HW_UART0, UART_RX_ISR);
@@ -388,14 +399,15 @@ int main(void)
     /* 开启UART Rx中断 */
     UART_ITDMAConfig(HW_UART0, kUART_IT_Rx, true);
 
-    initDriver();
-    setSpeed(2000);
     initOLED();
+    initDriver();
     initCamera();
     
-
+    
+    
     while(1)
     {
-
+        PDout(10) = !PDout(10);
+        DelayMs(500);
     }
 }

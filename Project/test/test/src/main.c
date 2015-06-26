@@ -67,7 +67,7 @@ void setSpeed(int spd){
 //0: 80x60
 //1: 160x120
 //2: 240x180
-#define IMAGE_SIZE  0
+#define IMAGE_SIZE  1
 
 #if (IMAGE_SIZE  ==  0)
 #define OV7620_W    (80)
@@ -84,6 +84,9 @@ void setSpeed(int spd){
 #else
 #error "Image Size Not Support!"
 #endif
+
+#define WIDTH OV7620_W
+#define HEIGHT OV7620_H-1
 
 // 图像内存池
 uint8_t gCCD_RAM[(OV7620_H)*((OV7620_W/8)+1)];   //使用内部RAM
@@ -243,16 +246,42 @@ void initCamera(){
 }
 
 // IMG
-uint8_t gIMG[OV7620_W][OV7620_H];   //使用内部RAM
+uint8_t IMG[OV7620_W][OV7620_H];   //使用内部RAM
+
+int white[HEIGHT];
+int whiteF[HEIGHT];
+
+void findType(){
+    int y;
+    int x;
+    int lastwhite = 0;
+    for(y=0;y<HEIGHT;y++){
+        int whitedots=0;
+        for(x=0;x<OV7620_W;x++){
+            if(IMG[x][y]==0)whitedots++;
+        }
+        white[y] = whitedots;
+        whiteF[y] = whitedots - lastwhite;
+        lastwhite = whitedots;
+    }
+    //统计白点个数和进行微分
+    
+    //直道，左转弯，右转弯的微分在有效区域都是0~2，通常在1左右，一旦小于0就表示有其他的干扰存在
+    //十字路口微分在有效区域中有一段大于0和一段小于0，其他的值也是0~2
+    for(y=HEIGHT;y>0;y--){
+        if(abs(whiteF[y])>3)break;
+    }
+    for(x=0;x<WIDTH;x++)IMG[x][y]=1;
+}
 
 void findLine(){
     int y;
     int x;
     for(y=0;y<OV7620_H-1;y++){
         for(x=0;x<OV7620_W-1;x++){
-            gIMG[x][y] ^= gIMG[x+1][y];
+            IMG[x][y] ^= IMG[x+1][y];
         }
-        gIMG[x][y]=0;
+        IMG[x][y]=0;
     }
 }
 
@@ -262,67 +291,6 @@ int sum;
 #define LOWSPEED 1500
 #define PSPEED 30
 
-int centers[OV7620_H] = {0};
-
-void findCenter(){
-    
-    int center = OV7620_W/2;
-    int lastcenter = OV7620_W/2;
-    int left, right;
-    int y;
-    
-    average = 0;
-    sum=0;
-    int error = 0;
-    
-    for(y=OV7620_H-2;y>0;y--){
-        for(left = lastcenter;left>0;left--)
-            if(gIMG[left][y])break;
-        //寻找左边缘
-        for(right = lastcenter;right<OV7620_W;right++)
-            if(gIMG[right][y])break;
-        //寻找右边缘
-        
-        center = (left+right)/2;
-        int delta = lastcenter - center; //当前斜率
-
-        if(y != OV7620_H-2){
-            if(delta>DELTA_MAX | delta<-DELTA_MAX){
-//                for(int x=0;x<OV7620_W;x++)
-//                    gIMG[x][y]=1;
-                //画一条截止线
-                error ++;
-                if(error>3)
-                break;
-            }else {
-                average += center;
-                centers[y]=center;
-                sum ++;
-            }
-        }
-        lastcenter = center;
-//        for(int x=0;x<OV7620_W;x++)
-//                gIMG[x][y]=0;
-        gIMG[center][y]=1;
-    }
-    
-    for(;y>0;y--)centers[y]=0;
-    average /= sum;
-    
-//    if(sum < 10){
-//        setSpeed(0);
-//        turn(0);
-//        DelayMs(500);
-//    }else {
-//        setSpeed(LOWSPEED+(30-abs(average-44))*PSPEED);
-//        turn((average-44)*1);
-//    }
-    
-    
-    
-    //printf("\r\n");
-    
-}
 
 bool printflag = false;
 
@@ -332,9 +300,10 @@ static void UserApp(uint32_t vcount)
     for(int y=0;y<OV7620_H-1;y++)
         for(int x=0;x<OV7620_W/8;x++)
             for(int i=0; i<8; i++)
-                gIMG[x*8+i][y] = (gpHREF[y][x+1]>>(7-i))%2;
+                IMG[x*8+i][y] = (gpHREF[y][x+1]>>(7-i))%2;
     //将图片从OV7620_H*OV7620_W/8映射到OV7620_H*OV7620_W
 
+    findType();
     //findLine();
     //findCenter();
     
@@ -344,10 +313,10 @@ static void UserApp(uint32_t vcount)
         printf("start\r\n");
         for(int y=0;y<OV7620_H-1;y++){
              for(int x=0;x<OV7620_W;x++){
-//                 if(gIMG[x][y]){
+//                 if(IMG[x][y]){
 //                     printf("%c%c\r\n",x,y);
 //                 }
-                 if(gIMG[x][y]){
+                 if(IMG[x][y]){
                      printf("1");
                  }else{
                      printf("0");
@@ -373,8 +342,10 @@ static void UserApp(uint32_t vcount)
         LED_WrCmd(0x10); //0x10+0~16表示将128列分成16组其地址所在第几组
         for(int x=0;x<80;x++){
             uint8_t data = 0;
-            for(int i=0;i<8 && y*8+i<OV7620_H ;i++)
-                data += gIMG[x][y*8+i]<<(i);
+            
+            for(int i=0;i<8 && (y*8+i)*2<OV7620_H ;i++){
+                data += (IMG[x*2][(y*8+i)*2] | IMG[x*2][(y*8+i)*2+1])<<(i);
+            }
             LED_WrDat(data);
         }
     }

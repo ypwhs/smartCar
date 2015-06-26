@@ -309,14 +309,14 @@ void findCenter(){
     for(;y>0;y--)centers[y]=0;
     average /= sum;
     
-    if(sum < 10){
-        setSpeed(0);
-        turn(0);
-        DelayMs(500);
-    }else {
-        setSpeed(LOWSPEED+(30-abs(average-44))*PSPEED);
-        turn((average-44)*1);
-    }
+//    if(sum < 10){
+//        setSpeed(0);
+//        turn(0);
+//        DelayMs(500);
+//    }else {
+//        setSpeed(LOWSPEED+(30-abs(average-44))*PSPEED);
+//        turn((average-44)*1);
+//    }
     
     
     
@@ -336,17 +336,24 @@ static void UserApp(uint32_t vcount)
     //将图片从OV7620_H*OV7620_W/8映射到OV7620_H*OV7620_W
 
     //findLine();
-    findCenter();
+    //findCenter();
     
     if(printflag){
         printflag = false;
-        //打印出图像边缘
+        //打印出图像
+        printf("start\r\n");
         for(int y=0;y<OV7620_H-1;y++){
              for(int x=0;x<OV7620_W;x++){
+//                 if(gIMG[x][y]){
+//                     printf("%c%c\r\n",x,y);
+//                 }
                  if(gIMG[x][y]){
-                     printf("%c%c\r\n",x,y);
+                     printf("1");
+                 }else{
+                     printf("0");
                  }
             }
+            printf("\r\n");
         }
         
         //打印出中心线

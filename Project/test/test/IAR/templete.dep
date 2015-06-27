@@ -560,10 +560,6 @@
           <name>BICOMP</name>
           <file> 79</file>
         </tool>
-        <tool>
-          <name>ICCARM</name>
-          <file> 76</file>
-        </tool>
       </outputs>
       <inputs>
         <tool>

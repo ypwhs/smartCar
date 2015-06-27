@@ -254,10 +254,11 @@ bool crossflag = false;
 void findType(){
     int y;
     int x;
+    
     int lastwhite = 0;
     for(y=0;y<HEIGHT;y++){
         int whitedots=0;
-        for(x=0;x<OV7620_W;x++){
+        for(x=0;x<WIDTH;x++){
             if(IMG[x][y]==0)whitedots++;
         }
         white[y] = whitedots;
@@ -273,9 +274,9 @@ void findType(){
     int crossend = 0;
     for(y=HEIGHT;y>0;y--){
         if(whiteF[y]<3&&whiteF[y]>-3)continue;	//正常模式
-        if(whiteF[y]<-10){		//十字路口开始
+        if(whiteF[y]<-5){		//十字路口开始
         	crossstart = y;
-        	while(whiteF[y]<10 && y)y--;//走道十字路口尾部
+        	while(whiteF[y]<5 && y)y--;//走道十字路口尾部
         	while(whiteF[y]>2 && y)y--;//十字路口结束
         	if(y<=0)break;
         	crossend = y;
@@ -286,8 +287,8 @@ void findType(){
     if( (crossstart-crossend>15) && crossend && white[(crossstart+crossend)/2] > 150){
         crossflag = true;
         //在十字起始位置从中心向两边搜索边界
-        crossstart+=2;
-        crossend-=2;
+        crossstart+=5;
+        crossend-=5;
         //printf("crossstart:%d,crossend:%d\r\n", crossstart, crossend);
         int left1 = WIDTH/2;
         int right1 = WIDTH/2;
@@ -320,8 +321,8 @@ void findType(){
                 if(IMG[right2][crossend] == 0 && (IMG[right2+1][crossend] == 1))break;
                 right2++;
             }
-            IMG[left2][crossend] = 1;
-            IMG[right2][crossend] = 1;
+            IMG[left2][crossend] = 2;
+            IMG[right2][crossend] = 2;
 
             k1 = (float)(left2-left1)/(crossend-crossstart);
             k2 = (float)(right2-right1)/(crossend-crossstart);
@@ -332,9 +333,9 @@ void findType(){
         if(crossend){
             //printf("k1=%f,k2=%f\r\n", k1, k2);
             
-            for(int i=0;i<(crossstart-crossend);i++){
-                IMG[(int)(left2+k1*i)][crossend+i] = 1;
-                IMG[(int)(right2+k2*i)][crossend+i] = 1;
+            for(int i=0;i<(crossstart-crossend) && crossend+i < HEIGHT-1;i++){
+                IMG[(int)(left2+k1*i)][crossend+i] = 2;
+                IMG[(int)(right2+k2*i)][crossend+i] = 2;
             }
         }
     }else crossflag = false;
@@ -377,15 +378,8 @@ static void UserApp(uint32_t vcount)
         //打印出图像
         printf("start\r\n");
         for(int y=0;y<OV7620_H-1;y++){
-             for(int x=0;x<OV7620_W;x++){
-//                 if(IMG[x][y]){
-//                     printf("%c%c\r\n",x,y);
-//                 }
-                 if(IMG[x][y]){
-                     printf("1");
-                 }else{
-                     printf("0");
-                 }
+            for(int x=0;x<OV7620_W;x++){
+                printf("%d", IMG[x][y]);
             }
             printf("\r\n");
         }
@@ -400,9 +394,8 @@ static void UserApp(uint32_t vcount)
         LED_WrCmd(0x10); //0x10+0~16表示将128列分成16组其地址所在第几组
         for(int x=0;x<80;x++){
             uint8_t data = 0;
-            
             for(int i=0;i<8 && (y*8+i)*2<OV7620_H ;i++){
-                data += (IMG[x*2][(y*8+i)*2] | IMG[x*2][(y*8+i)*2+1])<<(i);
+                data += (IMG[x*2][(y*8+i)*2] > 0 | IMG[x*2][(y*8+i)*2+1] > 0)<<(i);
             }
             LED_WrDat(data);
         }

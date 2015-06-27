@@ -250,7 +250,7 @@ uint8_t IMG[OV7620_W][OV7620_H];   //使用内部RAM
 
 int white[HEIGHT];
 int whiteF[HEIGHT];
-
+bool crossflag = false;
 void findType(){
     int y;
     int x;
@@ -268,10 +268,76 @@ void findType(){
     
     //直道，左转弯，右转弯的微分在有效区域都是0~2，通常在1左右，一旦小于0就表示有其他的干扰存在
     //十字路口微分在有效区域中有一段大于0和一段小于0，其他的值也是0~2
+    
+    int crossstart = 0;
+    int crossend = 0;
     for(y=HEIGHT;y>0;y--){
-        if(abs(whiteF[y])>3)break;
+        if(whiteF[y]<3&&whiteF[y]>-3)continue;	//正常模式
+        if(whiteF[y]<-10){		//十字路口开始
+        	crossstart = y;
+        	while(whiteF[y]<10 && y)y--;//走道十字路口尾部
+        	while(whiteF[y]>2 && y)y--;//十字路口结束
+        	if(y<=0)break;
+        	crossend = y;
+        	break;
+        }
     }
-    for(x=0;x<WIDTH;x++)IMG[x][y]=1;
+    
+    if( (crossstart-crossend>15) && crossend && white[(crossstart+crossend)/2] > 150){
+        crossflag = true;
+        //在十字起始位置从中心向两边搜索边界
+        crossstart+=2;
+        crossend-=2;
+        //printf("crossstart:%d,crossend:%d\r\n", crossstart, crossend);
+        int left1 = WIDTH/2;
+        int right1 = WIDTH/2;
+        while(left1){
+            if(IMG[left1][crossstart] == 1 && (IMG[left1+1][crossstart] == 0))break;
+            left1--;
+        }
+        while(right1 < WIDTH-1){
+            if(IMG[right1][crossstart] == 0 && (IMG[right1+1][crossstart] == 1))break;
+            right1++;
+        }
+        IMG[left1][crossstart] = 1;
+        IMG[right1][crossstart] = 1;
+
+
+        //在十字终止位置从中心向两边搜索边界
+        int left2;
+        int right2;
+        float k1 = 0;
+        float k2 = 0;
+        
+        while(crossend){
+            left2 = WIDTH/2;
+            right2 = WIDTH/2;
+            while(left2){
+                if(IMG[left2][crossend] == 1 && (IMG[left2+1][crossend] == 0))break;
+                left2--;
+            }
+            while(right2 < WIDTH-1){
+                if(IMG[right2][crossend] == 0 && (IMG[right2+1][crossend] == 1))break;
+                right2++;
+            }
+            IMG[left2][crossend] = 1;
+            IMG[right2][crossend] = 1;
+
+            k1 = (float)(left2-left1)/(crossend-crossstart);
+            k2 = (float)(right2-right1)/(crossend-crossstart);
+            if(k1<0 && k2>0)break;
+            crossend--;
+        }
+        
+        if(crossend){
+            //printf("k1=%f,k2=%f\r\n", k1, k2);
+            
+            for(int i=0;i<(crossstart-crossend);i++){
+                IMG[(int)(left2+k1*i)][crossend+i] = 1;
+                IMG[(int)(right2+k2*i)][crossend+i] = 1;
+            }
+        }
+    }else crossflag = false;
 }
 
 void findLine(){
@@ -290,7 +356,6 @@ int average;
 int sum;
 #define LOWSPEED 1500
 #define PSPEED 30
-
 
 bool printflag = false;
 
@@ -325,13 +390,6 @@ static void UserApp(uint32_t vcount)
             printf("\r\n");
         }
         
-        //打印出中心线
-//        for(int y=0;y<OV7620_H-1;y++){
-//            if(centers[y]!=0){
-//                printf("%c%c\r\n",centers[y],y);
-//                //DelayMs(4);
-//            }
-//        }
     }
     
     
@@ -353,6 +411,8 @@ static void UserApp(uint32_t vcount)
     char buf[20] = {0};
     sprintf(buf, "a=%d ", average);
     LED_P8x16Str(80, 0, buf);
+    if(crossflag)LED_P8x16Str(80, 1, "cross ");
+    else LED_P8x16Str(80, 1, "normal");
     
 }
 
@@ -365,7 +425,6 @@ void UART_RX_ISR(uint16_t byteRec){
 
 int main(void)
 {
-    
     DelayInit();
     /* 打印串口及小灯 */
     

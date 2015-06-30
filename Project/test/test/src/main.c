@@ -13,7 +13,7 @@
 
 
 #define offset 77
-void turn(float angel){
+void turn(int angel){
     angel += offset;
     int pwm = (int)((angel/90.0 + 0.5) * 500);  //90度是1.5ms
     printf("turn:%d\r\n", pwm);
@@ -21,6 +21,7 @@ void turn(float angel){
 }
 
 #define DRIVER_PWM_WIDTH 1000
+void setSpeed(int spd);
 void initDriver(){
     printf("initPWM\r\n");
 
@@ -38,7 +39,7 @@ void initDriver(){
     FTM_PWM_QuickInit(FTM0_CH2_PC03, kPWM_EdgeAligned, DRIVER_PWM_WIDTH);
     FTM_PWM_QuickInit(FTM0_CH3_PC04, kPWM_EdgeAligned, DRIVER_PWM_WIDTH);
     //初始化电机PWM输出
-    
+    setSpeed(0);
 }
 
 void setSpeed(int spd){
@@ -66,7 +67,7 @@ void setSpeed(int spd){
 //0: 80x60
 //1: 160x120
 //2: 240x180
-#define IMAGE_SIZE  0
+#define IMAGE_SIZE  1
 
 #if (IMAGE_SIZE  ==  0)
 #define OV7620_W    (80)
@@ -83,6 +84,9 @@ void setSpeed(int spd){
 #else
 #error "Image Size Not Support!"
 #endif
+
+#define WIDTH OV7620_W
+#define HEIGHT OV7620_H-1
 
 // 图像内存池
 uint8_t gCCD_RAM[(OV7620_H)*((OV7620_W/8)+1)];   //使用内部RAM
@@ -241,83 +245,114 @@ void initCamera(){
     DMA_Init(&DMA_InitStruct1);
 }
 
-// IMG
-uint8_t gIMG[OV7620_W][OV7620_H];   //使用内部RAM
-
-void findLine(){
-    for(int y=0;y<OV7620_H;y++){
-        for(int x=0;x<OV7620_W;x++){
-            if(gIMG[x][y]==0 && gIMG[x+1][y]){
-                x++;continue;
-            }
-            if(gIMG[x][y]&&gIMG[x+1][y]){
-                gIMG[x][y]=0;
-            }
-        }
-    }
-}
-#define DELTA_MAX 5
-int dirsum;
-int average;
-void findCenter(){
-    
-    int center = 30;
-    int lastcenter = 30;
-    int delta = 0;
-    int left, right;
-    int y;
-    
-    dirsum = 0;
-    average = 0;
-    int sum = 0;
-    
-    for(y=OV7620_H-2;y>0;y--){
-        for(left = lastcenter;left>0;left--)
-            if(gIMG[left][y])break;
-        for(right = lastcenter;right<OV7620_W;right++)
-            if(gIMG[right][y])break;
-        
-        center = (left+right)/2;
-        delta = center - lastcenter;
-
-        if(y!=OV7620_H-2){
-            if(delta>DELTA_MAX | delta<-DELTA_MAX){
-                for(int x=0;x<OV7620_W;x++)
-                    gIMG[x][y]=1;
-                break;
-            }else {
-                dirsum += delta;
-                average += center;
-                sum ++;
-            }
-            //printf("%d\r\n",delta);
-            
-        }
-        lastcenter = center;
-        for(int x=0;x<OV7620_W;x++)
-                gIMG[x][y]=0;
-        gIMG[center][y]=1;
-    }
-    
-    
-    
-    if(sum < 10){
-        setSpeed(0);
-        turn(0);
-        DelayMs(100);
-    }else {
-        average /= sum;
-        setSpeed(2600-70*abs(average-38));
-        turn(1.4*(average-38));
-    }
-    
-    
-    
-    //printf("\r\n");
-    
-}
 
 bool printflag = false;
+//串口接收中断
+void UART_RX_ISR(uint16_t byteRec){
+    //打印整个图像
+    if(byteRec == ' ')printflag = true;
+
+}
+// IMG
+uint8_t IMG[OV7620_W][OV7620_H];   //使用内部RAM
+
+
+int white[HEIGHT];
+int whiteF[HEIGHT];
+bool crossflag = false;
+void findType(){
+    int y;
+    int x;
+    
+    int lastwhite = 0;
+    for(y=0;y<HEIGHT;y++){
+        int whitedots=0;
+        for(x=0;x<WIDTH;x++){
+            if(IMG[x][y]==0)whitedots++;
+        }
+        white[y] = whitedots;
+        whiteF[y] = whitedots - lastwhite;
+        lastwhite = whitedots;
+    }
+    //统计白点个数和进行微分
+    
+    //直道，左转弯，右转弯的微分在有效区域都是0~2，通常在1左右，一旦小于0就表示有其他的干扰存在
+    //十字路口微分在有效区域中有一段大于0和一段小于0，其他的值也是0~2
+    
+    int crossstart = 0;
+    int crossend = 0;
+    for(y=HEIGHT;y>0;y--){
+        if(whiteF[y]<3&&whiteF[y]>-3)continue;  //正常模式
+        if(whiteF[y]<-5){       //十字路口开始
+            crossstart = y;
+            while(whiteF[y]<5 && y)y--;//走道十字路口尾部
+            while(whiteF[y]>2 && y)y--;//十字路口结束
+            if(y<=0)break;
+            crossend = y;
+            break;
+        }
+    }
+    
+    if( (crossstart-crossend>15) && crossend && white[(crossstart+crossend)/2] > 150){
+        crossflag = true;
+        //在十字起始位置从中心向两边搜索边界
+        crossstart+=5;
+        crossend-=5;
+        //printf("crossstart:%d,crossend:%d\r\n", crossstart, crossend);
+        int left1 = WIDTH/2;
+        int right1 = WIDTH/2;
+        while(left1){
+            if(IMG[left1][crossstart] == 1 && (IMG[left1+1][crossstart] == 0))break;
+            left1--;
+        }
+        while(right1 < WIDTH-1){
+            if(IMG[right1][crossstart] == 0 && (IMG[right1+1][crossstart] == 1))break;
+            right1++;
+        }
+        IMG[left1][crossstart] = 1;
+        IMG[right1][crossstart] = 1;
+
+
+        //在十字终止位置从中心向两边搜索边界
+        int left2;
+        int right2;
+        float k1 = 0;
+        float k2 = 0;
+        
+        while(crossend){
+            left2 = WIDTH/2;
+            right2 = WIDTH/2;
+            while(left2){
+                if(IMG[left2][crossend] == 1 && (IMG[left2+1][crossend] == 0))break;
+                left2--;
+            }
+            while(right2 < WIDTH-1){
+                if(IMG[right2][crossend] == 0 && (IMG[right2+1][crossend] == 1))break;
+                right2++;
+            }
+            IMG[left2][crossend] = 2;
+            IMG[right2][crossend] = 2;
+
+            k1 = (float)(left2-left1)/(crossend-crossstart);
+            k2 = (float)(right2-right1)/(crossend-crossstart);
+            if(k1<0 && k2>0)break;
+            crossend--;
+        }
+        
+        if(crossend){
+            //两边补线
+            for(int i=0;i<(crossstart-crossend) && crossend+i < HEIGHT-1;i++){
+                IMG[(int)(left2+k1*i)][crossend+i] = 2;
+                IMG[(int)(right2+k2*i)][crossend+i] = 2;
+            }
+        }
+    }else crossflag = false;
+}
+
+void findCenter();
+
+#define DELTA_MAX 3
+int average;
 
 /* 接收完成一场后 用户处理函数 */
 static void UserApp(uint32_t vcount)
@@ -325,58 +360,105 @@ static void UserApp(uint32_t vcount)
     for(int y=0;y<OV7620_H-1;y++)
         for(int x=0;x<OV7620_W/8;x++)
             for(int i=0; i<8; i++)
-                gIMG[x*8+i][y] = (gpHREF[y][x+1]>>(7-i))%2;
+                IMG[x*8+i][y] = (gpHREF[y][x+1]>>(7-i))%2;
     //将图片从OV7620_H*OV7620_W/8映射到OV7620_H*OV7620_W
 
-    findLine();
+    findType();
     findCenter();
     
     if(printflag){
         printflag = false;
+        //打印出图像
+        printf("start\r\n");
         for(int y=0;y<OV7620_H-1;y++){
-             for(int x=0;x<OV7620_W;x++){
-                printf("%d",gIMG[x][y]);
+            for(int x=0;x<OV7620_W;x++){
+                printf("%d", IMG[x][y]);
             }
             printf("\r\n");
         }
-        printf("\r\n");
+        
     }
     
+    
+    //打印到屏幕上
     for(int y=0;y<8;y++){
         LED_WrCmd(0xb0 + y); //0xb0+0~7表示页0~7
         LED_WrCmd(0x00); //0x00+0~16表示将128列分成16组其地址在某组中的第几列
         LED_WrCmd(0x10); //0x10+0~16表示将128列分成16组其地址所在第几组
         for(int x=0;x<80;x++){
             uint8_t data = 0;
-            for(int i=0;i<8 && y*8+i<OV7620_H ;i++)
-                data += gIMG[x][y*8+i]<<(i);
+            for(int i=0;i<8 && (y*8+i)*2<HEIGHT ;i++){
+                data += (IMG[x*2][(y*8+i)*2] > 0 | IMG[x*2][(y*8+i)*2+1] > 0)<<(i);
+            }
             LED_WrDat(data);
         }
     }
     
-    char buf[20] = {0};
-    sprintf(buf, "s=%d ", dirsum);
-    LED_P8x16Str(80, 0, buf);
+    if(crossflag)LED_P8x16Str(80, 0, "cross ");
+    else LED_P8x16Str(80, 0, "normal");
+
     
-    sprintf(buf, "a=%d ", average);
+}
+
+
+void findCenter(){
+    int y=HEIGHT;
+
+    int center = WIDTH/2;       //赛道中心
+    int s = 0;          //中心累积求和
+    int sum = 0;        //中心数
+    
+    int left;
+    int right;
+    
+    int err = 0;
+    
+    while(y){
+        left = center-1;
+        right = center+1;
+        
+        while(left){
+            if(IMG[left][y])break;
+            left--;
+        }
+        while(right < WIDTH){
+            if(IMG[right][y])break;
+            right++;
+        }
+        
+        center = (left+right)/2;
+        if(right-left<10){
+            err++;
+            break;
+        }
+        if(err>3)break;
+        s += center;
+        sum ++;
+        IMG[center][y] = 1;
+        y--;
+    }
+    
+    if(sum>10){
+        average = s/sum;
+    }else{
+        setSpeed(0);
+        turn(0);
+        DelayMs(100);
+    }
+    
+    char buf[20]={0};
+    sprintf(buf, "a=%d ", average-80);
     LED_P8x16Str(80, 1, buf);
+    sprintf(buf, "h=%d ", sum);
+    LED_P8x16Str(80, 2, buf);
     
 }
-
-//串口接收中断
-void UART_RX_ISR(uint16_t byteRec){
-    //打印整个图像
-    printflag = true;
-
-}
-
 int main(void)
 {
-
     DelayInit();
     /* 打印串口及小灯 */
-
-    GPIO_QuickInit(HW_GPIOC, 3, kGPIO_Mode_OPP);
+    
+    GPIO_QuickInit(HW_GPIOD, 10, kGPIO_Mode_OPP);
     UART_QuickInit(UART0_RX_PB16_TX_PB17, 115200);
     /* 注册中断回调函数 */
     UART_CallbackRxInstall(HW_UART0, UART_RX_ISR);
@@ -384,14 +466,15 @@ int main(void)
     /* 开启UART Rx中断 */
     UART_ITDMAConfig(HW_UART0, kUART_IT_Rx, true);
 
-    initDriver();
-    setSpeed(2000);
     initOLED();
+    initDriver();
     initCamera();
     
-
+    
+    
     while(1)
     {
-
+        PDout(10) = !PDout(10);
+        DelayMs(500);
     }
 }

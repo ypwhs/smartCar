@@ -297,7 +297,7 @@ void findType(){
         }
     }
     
-    if( (crossstart-crossend>15) && crossend && white[(crossstart+crossend)/2] > 150){
+    if( (crossstart-crossend>15) && crossend && white[(crossstart+crossend)/2] > 120){
         crossflag = true;
         //在十字起始位置从中心向两边搜索边界
         crossstart+=5;
@@ -438,7 +438,7 @@ void findCenter(){
             err++;
             break;
         }
-        if(err>5)break;
+        if(err>12)break;
         s += center;
         sum ++;
         IMG[center][y] = 1;
@@ -452,7 +452,7 @@ void findCenter(){
         average -= 80;
         LED_P8x16Str(80, 3, buf);
         turn(average/1.5);
-        setSpeed(1600+(sum-60)*20+(25-abs(average))*20);
+        setSpeed(1800+(sum-60)*20+(25-abs(average))*20);
         err2=0;
     }else{
         err2++;
@@ -472,7 +472,7 @@ void findCenter(){
 float differ = 0;
 
 void setSpeed(int spd){
-#define kchasu 40
+#define kchasu 60
     if(average>0){
         setLeftSpeed(spd+spd*average/kchasu);
         setRightSpeed(spd);

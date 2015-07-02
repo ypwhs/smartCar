@@ -10,13 +10,14 @@
 
 #include "ftm.h"
 #include "lptmr.h"
+#include "pit.h"
 
 
 #define offset 77
-void turn(int angel){
+void turn(float angel){
     angel += offset;
     int pwm = (int)((angel/90.0 + 0.5) * 500);  //90度是1.5ms
-    printf("turn:%d\r\n", pwm);
+    //printf("turn:%d\r\n", pwm);
     FTM_PWM_ChangeDuty(HW_FTM1, HW_FTM_CH0, pwm);
 }
 
@@ -59,23 +60,6 @@ void setRightSpeed(int spd){
         FTM_PWM_ChangeDuty(HW_FTM0, HW_FTM_CH3, 0);
     }else
     {
-        FTM_PWM_ChangeDuty(HW_FTM0, HW_FTM_CH2, 0);
-        FTM_PWM_ChangeDuty(HW_FTM0, HW_FTM_CH3, -spd);
-    }
-}
-
-void setSpeed(int spd){
-    if(spd>0){
-        FTM_PWM_ChangeDuty(HW_FTM0, HW_FTM_CH1, spd);
-        FTM_PWM_ChangeDuty(HW_FTM0, HW_FTM_CH0, 0);
-        
-        FTM_PWM_ChangeDuty(HW_FTM0, HW_FTM_CH2, spd);
-        FTM_PWM_ChangeDuty(HW_FTM0, HW_FTM_CH3, 0);
-    }else
-    {
-        FTM_PWM_ChangeDuty(HW_FTM0, HW_FTM_CH1, 0);
-        FTM_PWM_ChangeDuty(HW_FTM0, HW_FTM_CH0, -spd);
-        
         FTM_PWM_ChangeDuty(HW_FTM0, HW_FTM_CH2, 0);
         FTM_PWM_ChangeDuty(HW_FTM0, HW_FTM_CH3, -spd);
     }
@@ -420,7 +404,9 @@ static void UserApp(uint32_t vcount)
     
 }
 
+int centers[HEIGHT] = {0};
 
+int err2 = 0;
 void findCenter(){
     int y=HEIGHT;
 
@@ -447,31 +433,64 @@ void findCenter(){
         }
         
         center = (left+right)/2;
+        centers[sum] = center;
         if(right-left<10){
             err++;
             break;
         }
-        if(err>3)break;
+        if(err>5)break;
         s += center;
         sum ++;
         IMG[center][y] = 1;
         y--;
     }
     
+    char buf[20]={0};
+    
     if(sum>10){
         average = s/sum;
+        average -= 80;
+        LED_P8x16Str(80, 3, buf);
+        turn(average/1.5);
+        setSpeed(1600+(sum-60)*20+(25-abs(average))*20);
+        err2=0;
     }else{
-        setSpeed(0);
-        turn(0);
-        DelayMs(100);
+        err2++;
+        if(err2>100){
+            setSpeed(0);
+            turn(0);
+            while(1);
+        }
     }
-    
-    char buf[20]={0};
-    sprintf(buf, "a=%d ", average-80);
+
+    sprintf(buf, "a=%d ", average);
     LED_P8x16Str(80, 1, buf);
     sprintf(buf, "h=%d ", sum);
     LED_P8x16Str(80, 2, buf);
-    
+}
+
+float differ = 0;
+
+void setSpeed(int spd){
+#define kchasu 40
+    if(average>0){
+        setLeftSpeed(spd+spd*average/kchasu);
+        setRightSpeed(spd);
+    }else{
+        //-spd*abs(average)*0.32/30
+        setLeftSpeed(spd);
+        setRightSpeed(spd-spd*average/kchasu);
+    }
+}
+
+void PIT_ISR(void)
+{
+    int value; /* 记录正交脉冲个数 */
+    uint8_t dir; /* 记录编码器旋转方向1 */
+    /* 获取正交解码数据 */
+    FTM_QD_GetData(HW_FTM2, &value, &dir);
+    printf("value:%6d dir:%d  \r", value, dir);
+    //FTM_QD_ClearCount(HW_FTM2); /* 如测量频率则需要定时清除Count值  */
 }
 
 int main(void)
@@ -491,11 +510,39 @@ int main(void)
     initDriver();
     initCamera();
     
+    //用户控制部分
+    GPIO_QuickInit(HW_GPIOC, 8, kGPIO_Mode_IPU);
+    GPIO_QuickInit(HW_GPIOC, 10, kGPIO_Mode_IPU);
+    GPIO_QuickInit(HW_GPIOC, 12, kGPIO_Mode_IPU);
+    GPIO_QuickInit(HW_GPIOC, 14, kGPIO_Mode_IPU);
+    GPIO_QuickInit(HW_GPIOC, 16, kGPIO_Mode_IPU);
+    GPIO_QuickInit(HW_GPIOC, 18, kGPIO_Mode_IPU);
+#define differadd 0.02
+    if(PCin(8))differ += differadd;
+    if(PCin(10))differ += differadd;
+    if(PCin(12))differ += differadd;
+    if(PCin(14))differ += differadd;
+    if(PCin(16))differ += differadd;
+    if(PCin(18))differ += differadd;
     
+    printf("differ=%f\r\n", differ);
+    
+    //编码器初始化
+    FTM_QD_QuickInit(FTM2_QD_PHA_PA10_PHB_PA11, kFTM_QD_NormalPolarity, kQD_PHABEncoding);
+    
+    /* 开启PIT中断 */
+//    PIT_QuickInit(HW_PIT_CH0, 1000*10);
+//    PIT_CallbackInstall(HW_PIT_CH0, PIT_ISR);
+//    PIT_ITDMAConfig(HW_PIT_CH0, kPIT_IT_TOF, true);
     
     while(1)
     {
+        //setSpeed(3000);
+        //turn(30);
+        //DelayMs(1000);
+        //turn(0);
+        DelayMs(1000);
         PDout(10) = !PDout(10);
-        DelayMs(500);
+        
     }
 }

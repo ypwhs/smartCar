@@ -262,47 +262,20 @@ uint8_t IMG[OV7620_W][OV7620_H];   //使用内部RAM
 
 
 int white[HEIGHT];
-int whiteF[HEIGHT];
 bool crossflag = false;
-void findType(){
-    int y;
-    int x;
-    
-    int lastwhite = 0;
-    for(y=0;y<HEIGHT;y++){
-        int whitedots=0;
-        for(x=0;x<WIDTH;x++){
-            if(IMG[x][y]==0)whitedots++;
-        }
-        white[y] = whitedots;
-        whiteF[y] = whitedots - lastwhite;
-        lastwhite = whitedots;
-    }
-    //统计白点个数和进行微分
-    
-    //直道，左转弯，右转弯的微分在有效区域都是0~2，通常在1左右，一旦小于0就表示有其他的干扰存在
-    //十字路口微分在有效区域中有一段大于0和一段小于0，其他的值也是0~2
-    
-    int crossstart = 0;
-    int crossend = 0;
-    for(y=HEIGHT;y>0;y--){
-        if(whiteF[y]<3&&whiteF[y]>-3)continue;  //正常模式
-        if(whiteF[y]<-5){       //十字路口开始
-            crossstart = y;
-            while(whiteF[y]<5 && y)y--;//走道十字路口尾部
-            while(whiteF[y]>2 && y)y--;//十字路口结束
-            if(y<=0)break;
-            crossend = y;
-            break;
-        }
-    }
-    
-    if( (crossstart-crossend>15) && crossend && white[(crossstart+crossend)/2] > 120){
-        crossflag = true;
-        //在十字起始位置从中心向两边搜索边界
-        crossstart+=5;
-        crossend-=5;
-        //printf("crossstart:%d,crossend:%d\r\n", crossstart, crossend);
+bool rectflag = false;
+
+void fixLine(int black, int y, bool isblack){
+    //宽度大于5的黑条或白条
+    if(white[y]>WIDTH-5)crossflag=true;else rectflag=false;
+
+    int crossstart = y+black+15;
+    int crossend = y-10;
+    if(crossend<0)crossend=0;
+    if(crossstart>HEIGHT)crossstart=WIDTH-1;
+    if(white[crossstart]>10&&white[crossend]>10){
+
+        //起始位置从中心向两边搜索边界
         int left1 = WIDTH/2;
         int right1 = WIDTH/2;
         while(left1){
@@ -313,46 +286,90 @@ void findType(){
             if(IMG[right1][crossstart] == 0 && (IMG[right1+1][crossstart] == 1))break;
             right1++;
         }
-        IMG[left1][crossstart] = 1;
-        IMG[right1][crossstart] = 1;
+        //printf("left1=%d,right1=%d\n", left1, right1);
 
-
-        //在十字终止位置从中心向两边搜索边界
+        //终止位置从中心向两边搜索边界
         int left2;
         int right2;
         float k1 = 0;
         float k2 = 0;
         
-        while(crossend){
-            left2 = WIDTH/2;
-            right2 = WIDTH/2;
-            while(left2){
-                if(IMG[left2][crossend] == 1 && (IMG[left2+1][crossend] == 0))break;
-                left2--;
-            }
-            while(right2 < WIDTH-1){
-                if(IMG[right2][crossend] == 0 && (IMG[right2+1][crossend] == 1))break;
-                right2++;
-            }
-            IMG[left2][crossend] = 2;
-            IMG[right2][crossend] = 2;
+        left2 = WIDTH/2;
+        right2 = WIDTH/2;
+        while(left2){
+            if(IMG[left2][crossend] == 1 && (IMG[left2+1][crossend] == 0))break;
+            left2--;
+        }
+        while(right2 < WIDTH-1){
+            if(IMG[right2][crossend] == 0 && (IMG[right2+1][crossend] == 1))break;
+            right2++;
+        }
+        IMG[left2][crossend] = 2;
+        IMG[right2][crossend] = 2;
 
-            k1 = (float)(left2-left1)/(crossend-crossstart);
-            k2 = (float)(right2-right1)/(crossend-crossstart);
-            if(k1<0 && k2>0)break;
-            crossend--;
+        k1 = (float)(left2-left1)/(crossend-crossstart);
+        k2 = (float)(right2-right1)/(crossend-crossstart);
+        //f(k1<0 && k2>0)break;
+
+        //两边补线
+        for(int i=0;i<(crossstart-crossend) && crossend+i < HEIGHT-1;i++){
+            IMG[(int)(left2+k1*i)][crossend+i] = isblack?2:0;
+            IMG[(int)(right2+k2*i)][crossend+i] = isblack?2:0;
         }
-        
-        if(crossend){
-            //两边补线
-            for(int i=0;i<(crossstart-crossend) && crossend+i < HEIGHT-1;i++){
-                IMG[(int)(left2+k1*i)][crossend+i] = 2;
-                IMG[(int)(right2+k2*i)][crossend+i] = 2;
-            }
-        }
-    }else crossflag = false;
+    }
 }
 
+void findType(){
+    int x,y;
+    for(y=0;y<HEIGHT;y++){
+        int whitedots=0;
+        for(x=0;x<WIDTH;x++){
+            if(IMG[x][y]==0)whitedots++;
+        }
+        white[y] = whitedots;
+    }
+    //统计白点个数
+
+    int black=0;bool lastblack=false;
+    int whitesum=0;bool lastwhite=false;
+    
+    for(y=HEIGHT;y>0;y--){
+
+        if(white[y]<3){
+            //一条黑条
+            if(lastblack)black++;   //上一次也是黑,则黑++
+            else black=1;   //第一次黑
+            lastblack=true;
+        }else{
+            lastblack=false;
+            if(black>3){    //黑大于5次
+                rectflag=true;  //直角标志
+                fixLine(black, y, false);
+            }else{
+                rectflag = false;
+            }
+            black=0;
+        }
+
+        if(white[y]>WIDTH-3){
+            //一条白
+            if(lastwhite)whitesum++;   //上一次也是黑,则黑++
+            else whitesum=1;   //第一次黑
+            lastwhite=true;
+        }else{
+            lastwhite=true;
+            if(whitesum>5){
+                crossflag=true;
+                fixLine(whitesum, y, true);
+            }else{
+                crossflag = false;
+            }
+            whitesum=0;
+        }
+
+    }
+
+}
 void findCenter();
 
 #define DELTA_MAX 3
@@ -424,11 +441,11 @@ void findCenter(){
         right = center+1;
         
         while(left){
-            if(IMG[left][y])break;
+            if((IMG[left][y]==1)&&(IMG[left+1][y]==0))break;
             left--;
         }
         while(right < WIDTH){
-            if(IMG[right][y])break;
+            if((IMG[right-1][y]==0)&&(IMG[right][y]==1))break;
             right++;
         }
         
@@ -452,14 +469,14 @@ void findCenter(){
         average -= 80;
         LED_P8x16Str(80, 3, buf);
         turn(average/1.5);
-        setSpeed(1800+(sum-60)*20+(25-abs(average))*20);
+        setSpeed(1400+(sum-60)*20+(25-abs(average))*20);
         err2=0;
     }else{
         err2++;
-        if(err2>100){
+        if(err2>200){
             setSpeed(0);
-            turn(0);
-            while(1);
+            //turn(0);
+            //while(1);
         }
     }
 
@@ -477,20 +494,24 @@ void setSpeed(int spd){
         setLeftSpeed(spd+spd*average/kchasu);
         setRightSpeed(spd);
     }else{
-        //-spd*abs(average)*0.32/30
         setLeftSpeed(spd);
         setRightSpeed(spd-spd*average/kchasu);
     }
 }
 
+int speed = 0;
+float PSpeed = 0.1;
 void PIT_ISR(void)
 {
     int value; /* 记录正交脉冲个数 */
     uint8_t dir; /* 记录编码器旋转方向1 */
     /* 获取正交解码数据 */
     FTM_QD_GetData(HW_FTM2, &value, &dir);
-    printf("value:%6d dir:%d  \r", value, dir);
-    //FTM_QD_ClearCount(HW_FTM2); /* 如测量频率则需要定时清除Count值  */
+    if(!dir)value=65535-value;
+    
+    //printf("value:%6d dir:%d  \r\n", value, dir);
+    
+    FTM_QD_ClearCount(HW_FTM2); /* 如测量频率则需要定时清除Count值  */
 }
 
 int main(void)
@@ -531,18 +552,27 @@ int main(void)
     FTM_QD_QuickInit(FTM2_QD_PHA_PA10_PHB_PA11, kFTM_QD_NormalPolarity, kQD_PHABEncoding);
     
     /* 开启PIT中断 */
-//    PIT_QuickInit(HW_PIT_CH0, 1000*10);
-//    PIT_CallbackInstall(HW_PIT_CH0, PIT_ISR);
-//    PIT_ITDMAConfig(HW_PIT_CH0, kPIT_IT_TOF, true);
+    PIT_QuickInit(HW_PIT_CH0, 1000*100);
+    PIT_CallbackInstall(HW_PIT_CH0, PIT_ISR);
+    PIT_ITDMAConfig(HW_PIT_CH0, kPIT_IT_TOF, true);
     
+    GPIO_QuickInit(HW_GPIOB, 3, kGPIO_Mode_IPU);
+    
+    int test = 0;
+    int last = 0;
     while(1)
     {
-        //setSpeed(3000);
-        //turn(30);
-        //DelayMs(1000);
-        //turn(0);
-        DelayMs(1000);
-        PDout(10) = !PDout(10);
-        
+        DelayMs(100);
+//        if(PBin(3)){
+//            if(test>0)test--;
+//        }
+//        else {
+//            test = 50;
+//        }
+//        PDout(10) = test>0;
+//        if((test>0)!=last){
+//            printf("change,%d\r\n", test>0);
+//            last = test>0;
+//        }
     }
 }

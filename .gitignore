@@ -67,3 +67,5 @@ packages/
 #Test files
 *.testsettings
 
+
+*.bin

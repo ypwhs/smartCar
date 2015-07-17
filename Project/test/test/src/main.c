@@ -384,8 +384,8 @@ static void UserApp(uint32_t vcount)
                 IMG[x*8+i][y] = (gpHREF[y][x+1]>>(7-i))%2;
     //将图片从OV7620_H*OV7620_W/8映射到OV7620_H*OV7620_W
 
-    findType();
-    findCenter();
+    //findType();
+    //findCenter();
     
     if(printflag){
         printflag = false;
@@ -503,15 +503,17 @@ int speed = 0;
 float PSpeed = 0.1;
 void PIT_ISR(void)
 {
-    int value; /* 记录正交脉冲个数 */
+    int valueright = 0; /* 记录正交脉冲个数 */
     uint8_t dir; /* 记录编码器旋转方向1 */
     /* 获取正交解码数据 */
-    FTM_QD_GetData(HW_FTM2, &value, &dir);
-    if(!dir)value=65535-value;
-    
-    //printf("value:%6d dir:%d  \r\n", value, dir);
+    FTM_QD_GetData(HW_FTM2, &valueright, &dir);
+    int valueleft = LPTMR_PC_ReadCounter();
+    if(valueright>32767)valueright=65535-valueright;
+    valueright*=4.2279;
+    printf("\r\n%d\t%d", valueleft, valueright);
     
     FTM_QD_ClearCount(HW_FTM2); /* 如测量频率则需要定时清除Count值  */
+    LPTMR_ClearCounter();       //清空Counter
 }
 
 int main(void)
@@ -531,6 +533,15 @@ int main(void)
     initDriver();
     initCamera();
     
+    //编码器初始化
+    FTM_QD_QuickInit(FTM2_QD_PHA_PA10_PHB_PA11, kFTM_QD_NormalPolarity, kQD_PHABEncoding);
+    LPTMR_PC_QuickInit(LPTMR_ALT2_PC05); /* 脉冲计数 */
+    
+    /* 开启PIT中断 */
+    PIT_QuickInit(HW_PIT_CH0, 1000*100);
+    PIT_CallbackInstall(HW_PIT_CH0, PIT_ISR);
+    PIT_ITDMAConfig(HW_PIT_CH0, kPIT_IT_TOF, true);
+    
     //用户控制部分
     GPIO_QuickInit(HW_GPIOC, 8, kGPIO_Mode_IPU);
     GPIO_QuickInit(HW_GPIOC, 10, kGPIO_Mode_IPU);
@@ -539,7 +550,19 @@ int main(void)
     GPIO_QuickInit(HW_GPIOC, 16, kGPIO_Mode_IPU);
     GPIO_QuickInit(HW_GPIOC, 18, kGPIO_Mode_IPU);
 #define differadd 0.02
-    if(PCin(8))differ += differadd;
+    if(PCin(8)){
+        differ += differadd;
+//        for(int i=0;i<5000;i+=100){
+//            setSpeed(i);
+//            DelayMs(500);
+//            printf("\t%d", i);
+//            DelayMs(100);
+//        }
+        
+        setRightSpeed(3000);
+        turn(-20);
+        
+    }
     if(PCin(10))differ += differadd;
     if(PCin(12))differ += differadd;
     if(PCin(14))differ += differadd;
@@ -547,14 +570,7 @@ int main(void)
     if(PCin(18))differ += differadd;
     
     printf("differ=%f\r\n", differ);
-    
-    //编码器初始化
-    FTM_QD_QuickInit(FTM2_QD_PHA_PA10_PHB_PA11, kFTM_QD_NormalPolarity, kQD_PHABEncoding);
-    
-    /* 开启PIT中断 */
-    PIT_QuickInit(HW_PIT_CH0, 1000*100);
-    PIT_CallbackInstall(HW_PIT_CH0, PIT_ISR);
-    PIT_ITDMAConfig(HW_PIT_CH0, kPIT_IT_TOF, true);
+
     
     GPIO_QuickInit(HW_GPIOB, 3, kGPIO_Mode_IPU);
     
@@ -563,6 +579,9 @@ int main(void)
     while(1)
     {
         DelayMs(100);
+        
+        
+        
 //        if(PBin(3)){
 //            if(test>0)test--;
 //        }

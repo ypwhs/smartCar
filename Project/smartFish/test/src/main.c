@@ -119,7 +119,6 @@ void OV_ISR(uint32_t index)
                     //printf("i:%d %d\r\n", h_counter, i);
                     status = NEXT_FRAME;
                     h_counter = 0;
-
                 break;
             case NEXT_FRAME: //等待下次传输
                 status =  TRANSFER_IN_PROCESS;
@@ -222,21 +221,22 @@ static void UserApp(uint32_t vcount)
                 IMG[x*8+i][y] = (gpHREF[y][x+1]>>i)%2;
     //将图片从OV7620_H*OV7620_W/8映射到OV7620_H*OV7620_W
 
-    //findCenter();
     
-    if(printflag){
+    
+    if(printflag)
+    {
         printflag = false;
         //打印出图像
         printf("start\r\n");
-        for(int y=0;y<OV7620_H-1;y++){
-            for(int x=0;x<OV7620_W;x++){
+        for(int y=0;y<HEIGHT;y++){
+            for(int x=0;x<WIDTH;x++){
                 printf("%d", IMG[x][y]);
             }
             printf("\r\n");
         }
         
     }
-    
+    findCenter();
     
     //打印到屏幕上
     for(int y=0;y<8;y++){
@@ -245,7 +245,7 @@ static void UserApp(uint32_t vcount)
         LED_WrCmd(0x10); //0x10+0~16表示将128列分成16组其地址所在第几组
         for(int x=0;x<80;x++){
             uint8_t data = 0;
-            for(int i=0;i<8 && y*8+i < HEIGHT ;i++){
+            for(int i=0;i<8 && (y*8+i)-1 < HEIGHT ;i++){
                 //data += (IMG[x*2][(y*8+i)*2] > 0 | IMG[x*2+1][(y*8+i)*2] > 0)<<(i);
                 data += (IMG[x][y*8+i])<<i;
             }
@@ -300,10 +300,8 @@ void findCenter(){
     
     if(sum>10){
         average = s/sum;
-        average -= 80;
-        LED_P8x16Str(80, 3, buf);
+        average -= WIDTH/2;
         //执行动作
-        
         err2=0;
     }else{
         err2++;
@@ -314,9 +312,9 @@ void findCenter(){
     }
 
     sprintf(buf, "a=%d ", average);
-    LED_P8x16Str(80, 1, buf);
+    LED_P8x16Str(80, 0, buf);
     sprintf(buf, "h=%d ", sum);
-    LED_P8x16Str(80, 2, buf);
+    LED_P8x16Str(80, 1, buf);
 }
 
 void PIT_ISR(void)
@@ -328,7 +326,7 @@ int main(void)
 {
     DelayInit();
     /* 打印串口及小灯 */
-    
+    WDOG_QuickInit(1000);
     GPIO_QuickInit(HW_GPIOD, 10, kGPIO_Mode_OPP);
     UART_QuickInit(UART0_RX_PB16_TX_PB17, 115200);
     /* 注册中断回调函数 */
@@ -339,6 +337,7 @@ int main(void)
 
     initOLED();
     LED_P8x16Str(0, 0, "Hello YPW");
+    LED_P8x16Str(0, 1, "init Camera");
     initCamera();
     
     /* 开启PIT中断 */
@@ -346,9 +345,13 @@ int main(void)
     //PIT_CallbackInstall(HW_PIT_CH0, PIT_ISR);
     //PIT_ITDMAConfig(HW_PIT_CH0, kPIT_IT_TOF, true);
     
+    GPIO_QuickInit(HW_GPIOC, 4, kGPIO_Mode_OPP);
+    
     while(1)
     {
+        WDOG_Refresh();
         DelayMs(100);
-        
+        PCout(4)=!PCout(4);
+        //PCout(16) = !PCout(16);
     }
 }

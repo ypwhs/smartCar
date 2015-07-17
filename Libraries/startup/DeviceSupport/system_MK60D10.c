@@ -60,6 +60,7 @@
 #include "MK60D10.h"
 
 #define DISABLE_WDOG    1
+#define CLOCK_SETUP     3
 
 #ifndef CLOCK_SETUP
 #define CLOCK_SETUP     4

@@ -391,7 +391,7 @@ void LED_P8x16Str(uchar8 ucIdxX, uchar8 ucIdxY, uchar8 ucDataStr[])
 *****************************************************************************/
 void initOLED(void)
 {
-    for(int i = 1;i <= 6; i++)
+    for(int i = 0;i <= 7; i++)
         GPIO_QuickInit(HW_GPIOD, i, kGPIO_Mode_OPP);
 
     SPI_QuickInit(SPI0_SCK_PD01_SOUT_PD02_SIN_PD03, kSPI_CPOL0_CPHA0, 8*1000*1000);

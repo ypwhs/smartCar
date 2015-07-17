@@ -326,11 +326,13 @@ void PIT_ISR(void)
 
 int main(void)
 {
+    GPIO_QuickInit(HW_GPIOC, 14, kGPIO_Mode_OPP);
+    PCout(14)=1;
     DelayInit();
-    /* 打印串口及小灯 */
     
     GPIO_QuickInit(HW_GPIOD, 10, kGPIO_Mode_OPP);
     UART_QuickInit(UART0_RX_PB16_TX_PB17, 115200);
+    
     /* 注册中断回调函数 */
     UART_CallbackRxInstall(HW_UART0, UART_RX_ISR);
 
@@ -338,7 +340,9 @@ int main(void)
     UART_ITDMAConfig(HW_UART0, kUART_IT_Rx, true);
 
     initOLED();
+    LED_Fill(0x00);
     LED_P8x16Str(0, 0, "Hello YPW");
+    LED_P8x16Str(0, 1, "init Camera");
     initCamera();
     
     /* 开启PIT中断 */
@@ -346,9 +350,13 @@ int main(void)
     //PIT_CallbackInstall(HW_PIT_CH0, PIT_ISR);
     //PIT_ITDMAConfig(HW_PIT_CH0, kPIT_IT_TOF, true);
     
+    PCout(14)=0;
+    LED_Fill(0x00);
+    
+    WDOG_QuickInit(1000);
     while(1)
     {
-        DelayMs(100);
-        
+        WDOG_Refresh();
+        DelayMs(10);
     }
 }

@@ -19,7 +19,7 @@
 //0: 80x60
 //1: 160x120
 //2: 240x180
-#define IMAGE_SIZE  0
+#define IMAGE_SIZE  1
 
 #if (IMAGE_SIZE  ==  0)
 #define OV7620_W    (80)
@@ -37,7 +37,7 @@
 #error "Image Size Not Support!"
 #endif
 
-#define WIDTH OV7620_W
+#define WIDTH OV7620_W-1
 #define HEIGHT OV7620_H-1
 
 // 图像内存池
@@ -119,6 +119,7 @@ void OV_ISR(uint32_t index)
                     //printf("i:%d %d\r\n", h_counter, i);
                     status = NEXT_FRAME;
                     h_counter = 0;
+
                 break;
             case NEXT_FRAME: //等待下次传输
                 status =  TRANSFER_IN_PROCESS;
@@ -205,12 +206,12 @@ void UART_RX_ISR(uint16_t byteRec){
 
 }
 // IMG
-uint8_t IMG[OV7620_W][OV7620_H];   //使用内部RAM
+uint8_t IMG[OV7620_W+1][OV7620_H+1];   //使用内部RAM
 
 
 void findCenter();
 
-int average;
+int average=0;
 
 /* 接收完成一场后 用户处理函数 */
 static void UserApp(uint32_t vcount)
@@ -218,7 +219,7 @@ static void UserApp(uint32_t vcount)
     for(int y=0;y<OV7620_H-1;y++)
         for(int x=0;x<OV7620_W/8;x++)
             for(int i=0; i<8; i++)
-                IMG[x*8+i][y] = (gpHREF[y][x+1]>>i)%2;
+                IMG[x*8+i][y] = (gpHREF[y][x+1]>>(i))%2;
     //将图片从OV7620_H*OV7620_W/8映射到OV7620_H*OV7620_W
 
     
@@ -236,7 +237,7 @@ static void UserApp(uint32_t vcount)
         }
         
     }
-    findCenter();
+    //findCenter();
     
     //打印到屏幕上
     for(int y=0;y<8;y++){
@@ -245,9 +246,9 @@ static void UserApp(uint32_t vcount)
         LED_WrCmd(0x10); //0x10+0~16表示将128列分成16组其地址所在第几组
         for(int x=0;x<80;x++){
             uint8_t data = 0;
-            for(int i=0;i<8 && (y*8+i)-1 < HEIGHT ;i++){
-                //data += (IMG[x*2][(y*8+i)*2] > 0 | IMG[x*2+1][(y*8+i)*2] > 0)<<(i);
-                data += (IMG[x][y*8+i])<<i;
+            for(int i=0;i<8 && (y*8+i-1)<HEIGHT ;i++){
+                data += (IMG[x*2][(y*8+i)*2] > 0 | IMG[x*2+1][(y*8+i)*2] > 0)<<(i);
+                //data += (IMG[x][y*8+i])<<i;
             }
             LED_WrDat(data);
         }
@@ -324,6 +325,9 @@ void PIT_ISR(void)
 
 int main(void)
 {
+    GPIO_QuickInit(HW_GPIOC, 14, kGPIO_Mode_OPP);
+    PCout(14)=1;
+    
     DelayInit();
     /* 打印串口及小灯 */
     WDOG_QuickInit(1000);
@@ -336,6 +340,7 @@ int main(void)
     UART_ITDMAConfig(HW_UART0, kUART_IT_Rx, true);
 
     initOLED();
+    LED_Fill(0x00);
     LED_P8x16Str(0, 0, "Hello YPW");
     LED_P8x16Str(0, 1, "init Camera");
     initCamera();
@@ -344,14 +349,15 @@ int main(void)
     //PIT_QuickInit(HW_PIT_CH0, 1000*100);
     //PIT_CallbackInstall(HW_PIT_CH0, PIT_ISR);
     //PIT_ITDMAConfig(HW_PIT_CH0, kPIT_IT_TOF, true);
-    
-    GPIO_QuickInit(HW_GPIOC, 4, kGPIO_Mode_OPP);
-    
+
+
+    PCout(14)=0;
+    LED_Fill(0x00);
     while(1)
     {
         WDOG_Refresh();
         DelayMs(100);
-        PCout(4)=!PCout(4);
+        PDout(10) = !PDout(10);
         //PCout(16) = !PCout(16);
     }
 }

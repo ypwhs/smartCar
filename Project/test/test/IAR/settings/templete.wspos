@@ -1,2 +1,6 @@
 [MainWindow]
+<<<<<<< HEAD
 WindowPlacement=_ 0 5 1024 666 3
+=======
+WindowPlacement=_ 0 5 1024 666 2
+>>>>>>> parent of dfb9585... 1

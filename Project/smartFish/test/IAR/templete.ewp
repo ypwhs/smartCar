@@ -1960,6 +1960,9 @@
       <name>$PROJ_DIR$\..\..\..\..\Libraries\drivers\K\src\uart.c</name>
     </file>
     <file>
+      <name>$PROJ_DIR$\..\..\..\..\Libraries\drivers\K\inc\uart.h</name>
+    </file>
+    <file>
       <name>$PROJ_DIR$\..\..\..\..\Libraries\drivers\K\src\vref.c</name>
     </file>
     <file>

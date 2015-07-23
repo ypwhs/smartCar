@@ -223,7 +223,7 @@ static const struct ov7725_reg reg_tbl[] =
     {OV7725_BDMStep      , 0x03},
     {OV7725_SDE          , 0x04},
     {OV7725_BRIGHT       , 0x00},
-    {OV7725_CNST         , 30},
+    {OV7725_CNST         , 20},
     {OV7725_SIGN         , 0x06},
     {OV7725_UVADJ0       , 0x11},
     {OV7725_UVADJ1       , 0x02},
@@ -239,7 +239,7 @@ int ov7725_probe(uint8_t i2c_instance)
         if(!SCCB_ReadSingleRegister(i2c_instance, ov7725_addr[i], OV7725_VER, &dummy))
         {
             /* found device */
-            OV7725_TRACE("device found addr:0x%X\r\n", ov7725_addr[i]);
+            //OV7725_TRACE("device found addr:0x%X\r\n", ov7725_addr[i]);
             /* reset */
             SCCB_WriteSingleRegister(i2c_instance, ov7725_addr[i], OV7725_COM7, 0x80);
             /* inject default register value */

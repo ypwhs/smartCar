@@ -420,7 +420,7 @@ void initOLED(void)
     LED_Fill(0x00); // ≥ı º«Â∆¡
     LED_SetPos(0,0);
 
-    printf("OLED init OK\r\n");
+    //printf("OLED init OK\r\n");
     return;
 }
 

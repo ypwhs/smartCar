@@ -345,12 +345,16 @@ void findCenter(){
     //Â©ÓÍµã¼ì²â
     
     int louyou = 0;
-    for(y=100;y<110;y++)louyou += whites[y];
+    int louyou2 = 0;
     
+    for(y=90;y<100;y++)louyou += whites[y];
+    for(y=100;y<110;y++)louyou2 += whites[y];
     
-    if(louyou < 230 && louyou > 120){
-        louyoucount++;
-        louyoucount2=0;
+    if(louyou-louyou2>50){
+        if(louyou>240&louyou<400){
+            louyoucount++;
+            louyoucount2=0;
+        }
     }else {
         if(louyoucount>0)louyoucount--;
         louyoucount2++;
@@ -359,6 +363,19 @@ void findCenter(){
             louyoucount2=0;
         }
     }
+//    if(louyou < 230 && louyou > 120){
+//        louyoucount++;
+//        louyoucount2=0;
+//    }else {
+//        if(louyoucount>0)louyoucount--;
+//        louyoucount2++;
+//        if(louyoucount2>50){
+//            louyoucount=0;
+//            louyoucount2=0;
+//        }
+//    }
+    
+    
     
     if(louyoucount>2){
         PCout(ALERT)=1;

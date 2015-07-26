@@ -11,7 +11,10 @@
 #include "ftm.h"
 #include "lptmr.h"
 #include "pit.h"
+#include "wdog.h"
 
+
+int ENABLE_DRIVE = 1;
 
 #define offset 77
 void turn(float angel){
@@ -384,8 +387,8 @@ static void UserApp(uint32_t vcount)
                 IMG[x*8+i][y] = (gpHREF[y][x+1]>>(7-i))%2;
     //将图片从OV7620_H*OV7620_W/8映射到OV7620_H*OV7620_W
 
-    //findType();
-    //findCenter();
+    findType();
+    findCenter();
     
     if(printflag){
         printflag = false;
@@ -414,9 +417,9 @@ static void UserApp(uint32_t vcount)
             LED_WrDat(data);
         }
     }
-    
-    if(crossflag)LED_P8x16Str(80, 0, "cross ");
-    else LED_P8x16Str(80, 0, "normal");
+//    
+//    if(crossflag)LED_P8x16Str(80, 0, "cross ");
+//    else LED_P8x16Str(80, 0, "normal");
 
     
 }
@@ -455,6 +458,7 @@ void findCenter(){
             err++;
             break;
         }
+        
         if(err>12)break;
         s += center;
         sum ++;
@@ -462,14 +466,20 @@ void findCenter(){
         y--;
     }
     
-    char buf[20]={0};
+    //判断直角
+    int i;
+    int zhijiao = 0;
+    for(i=0;i<20 && y-i>0;i++){
+        if(white[y-i]<2)zhijiao++;
+    }
+    
+    
     
     if(sum>10){
         average = s/sum;
         average -= 80;
-        LED_P8x16Str(80, 3, buf);
-        turn(average/1.5);
-        setSpeed(1400+(sum-60)*20+(25-abs(average))*20);
+        if(ENABLE_DRIVE)turn(average/1.5);
+        if(ENABLE_DRIVE)setSpeed(1400+(sum-60)*20+(25-abs(average))*20);
         err2=0;
     }else{
         err2++;
@@ -480,10 +490,14 @@ void findCenter(){
         }
     }
 
-    sprintf(buf, "a=%d ", average);
+    char buf[20]={0};
+//    sprintf(buf, "a=%d ", average);
+//    LED_P8x16Str(80, 0, buf);
+    sprintf(buf, "z=%d ", zhijiao);
     LED_P8x16Str(80, 1, buf);
-    sprintf(buf, "h=%d ", sum);
+    sprintf(buf, "d=%d ", centers[80]-centers[110]);
     LED_P8x16Str(80, 2, buf);
+    
 }
 
 float differ = 0;
@@ -500,24 +514,47 @@ void setSpeed(int spd){
 }
 
 int speed = 0;
-float PSpeed = 0.1;
+int lastspeed = 0;
+float Pspeed = -1;
+float Dspeed = 0.1;
+int lastpwm = 0;
+int valueright = 0;
+int valueleft = 0;
 void PIT_ISR(void)
 {
-    int valueright = 0; /* 记录正交脉冲个数 */
+     /* 记录正交脉冲个数 */
     uint8_t dir; /* 记录编码器旋转方向1 */
+    
     /* 获取正交解码数据 */
     FTM_QD_GetData(HW_FTM2, &valueright, &dir);
-    int valueleft = LPTMR_PC_ReadCounter();
-    if(valueright>32767)valueright=65535-valueright;
-    valueright*=4.2279;
-    printf("\r\n%d\t%d", valueleft, valueright);
-    
+    valueleft = LPTMR_PC_ReadCounter();
     FTM_QD_ClearCount(HW_FTM2); /* 如测量频率则需要定时清除Count值  */
     LPTMR_ClearCounter();       //清空Counter
+    
+    if(valueright>32767)valueright=65535-valueright;
+    valueright*=4.2279;
+}
+
+void speedPID(){
+    
+
+    //printf("\r\n%d\t%d", valueleft, valueright);
+    speed = valueleft;
+    
+    int pwm = Pspeed * (speed - 1000) + Dspeed * (speed - lastspeed);
+    lastspeed = speed;
+    setSpeed(pwm+lastpwm);
+    lastpwm = pwm+lastpwm;
+    char buf[20]={0};
+    sprintf(buf, "p=%d ", pwm+lastpwm);
+    LED_P8x16Str(80, 0, buf);
+    sprintf(buf, "v=%d ", speed);
+    LED_P8x16Str(80, 3, buf);
 }
 
 int main(void)
 {
+    ENABLE_DRIVE = 0;
     DelayInit();
     /* 打印串口及小灯 */
     
@@ -559,8 +596,8 @@ int main(void)
 //            DelayMs(100);
 //        }
         
-        setRightSpeed(3000);
-        turn(-20);
+        //setRightSpeed(3000);
+        //turn(-20);
         
     }
     if(PCin(10))differ += differadd;
@@ -576,11 +613,14 @@ int main(void)
     
     int test = 0;
     int last = 0;
+    
+    WDOG_QuickInit(1000);
+    
     while(1)
     {
         DelayMs(100);
-        
-        
+        WDOG_Refresh();
+        //speedPID();
         
 //        if(PBin(3)){
 //            if(test>0)test--;

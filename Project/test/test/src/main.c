@@ -15,6 +15,7 @@
 
 
 int ENABLE_DRIVE = 1;
+int ENABLE_SERVO = 1;
 
 #define offset 77
 void turn(float angel){
@@ -373,10 +374,14 @@ void findType(){
     }
 
 }
+
+void findType2();
+
 void findCenter();
 
 #define DELTA_MAX 3
 int average;
+int centers[HEIGHT] = {0};
 
 /* 接收完成一场后 用户处理函数 */
 static void UserApp(uint32_t vcount)
@@ -386,22 +391,32 @@ static void UserApp(uint32_t vcount)
             for(int i=0; i<8; i++)
                 IMG[x*8+i][y] = (gpHREF[y][x+1]>>(7-i))%2;
     //将图片从OV7620_H*OV7620_W/8映射到OV7620_H*OV7620_W
-
+    
     findType();
     findCenter();
+    //findType2();
+    
+//    if(printflag){
+//        printflag = false;
+//        //打印出图像
+//        printf("start\r\n");
+//        for(int y=0;y<OV7620_H-1;y++){
+//            for(int x=0;x<OV7620_W;x++){
+//                printf("%d", IMG[x][y]);
+//            }
+//            printf("\r\n");
+//        }
+//        
+//    }
     
     if(printflag){
         printflag = false;
-        //打印出图像
-        printf("start\r\n");
-        for(int y=0;y<OV7620_H-1;y++){
-            for(int x=0;x<OV7620_W;x++){
-                printf("%d", IMG[x][y]);
-            }
-            printf("\r\n");
+        printf("ave\twhite\r\n");
+        for(int y=0;y<HEIGHT;y++){
+            printf("%d\t%d\r\n", centers[y], white[y]);
         }
-        
     }
+    
     
     
     //打印到屏幕上
@@ -424,7 +439,7 @@ static void UserApp(uint32_t vcount)
     
 }
 
-int centers[HEIGHT] = {0};
+int zhijiao = 0;
 
 int err2 = 0;
 void findCenter(){
@@ -438,23 +453,46 @@ void findCenter(){
     int right;
     
     int err = 0;
+    int zhongxinnum2 = 0;
     
     while(y){
         left = center-1;
         right = center+1;
         
-        while(left){
-            if((IMG[left][y]==1)&&(IMG[left+1][y]==0))break;
-            left--;
+        
+        int zhongxin = 0;
+        int zhongxinnum = 0;
+#define SCAN_WIDTH 15
+        int i=-SCAN_WIDTH;
+        if(center+i<0)i=-center+1;
+        for(;i<SCAN_WIDTH & (center+i < WIDTH);i++){
+            if(IMG[center+i][y]){
+                zhongxin += center+i;
+                zhongxinnum ++;
+            }
         }
-        while(right < WIDTH){
-            if((IMG[right-1][y]==0)&&(IMG[right][y]==1))break;
-            right++;
+        if(zhongxinnum){
+            center = zhongxin / zhongxinnum;
+            if(zhongxinnum2==0)
+                zhongxinnum2 = zhongxinnum;
+        }else{
+            
+            while(left){
+                if((IMG[left][y]==1)&&(IMG[left+1][y]==0))break;
+                left--;
+            }
+            while(right < WIDTH){
+                if((IMG[right-1][y]==0)&&(IMG[right][y]==1))break;
+                right++;
+            }
+            
+            center = (left+right)/2;
         }
         
-        center = (left+right)/2;
-        centers[sum] = center;
-        if(right-left<10){
+        if(center>WIDTH)
+            break;
+        centers[y] = center;
+        if((right-left<10) && (zhongxin == 0)){
             err++;
             break;
         }
@@ -462,24 +500,25 @@ void findCenter(){
         if(err>12)break;
         s += center;
         sum ++;
-        IMG[center][y] = 1;
+        
+        //画出中心线
+        
+        
         y--;
     }
     
-    //判断直角
-    int i;
-    int zhijiao = 0;
-    for(i=0;i<20 && y-i>0;i++){
-        if(white[y-i]<2)zhijiao++;
-    }
-    
+    s=0;
+    if(y<60)y=60;
+    int sum2 = 100-y;
+    for(;y<100;y++)s+=centers[y];
     
     
     if(sum>10){
-        average = s/sum;
+        for(y=HEIGHT;y>0;y--)IMG[centers[y]][y] = 1;
+        average = s/sum2;
         average -= 80;
-        if(ENABLE_DRIVE)turn(average/1.5);
-        if(ENABLE_DRIVE)setSpeed(1400+(sum-60)*20+(25-abs(average))*20);
+        if(ENABLE_SERVO)turn(average/1.5);
+        if(ENABLE_DRIVE)setSpeed(1000+(sum-60)*25+(25-abs(average))*20);
         err2=0;
     }else{
         err2++;
@@ -491,12 +530,10 @@ void findCenter(){
     }
 
     char buf[20]={0};
-//    sprintf(buf, "a=%d ", average);
-//    LED_P8x16Str(80, 0, buf);
-    sprintf(buf, "z=%d ", zhijiao);
+    sprintf(buf, "a=%d ", average);
+    LED_P8x16Str(80, 0, buf);
+        sprintf(buf, "z=%d ", zhongxinnum2);
     LED_P8x16Str(80, 1, buf);
-    sprintf(buf, "d=%d ", centers[80]-centers[110]);
-    LED_P8x16Str(80, 2, buf);
     
 }
 
@@ -535,25 +572,65 @@ void PIT_ISR(void)
     valueright*=4.2279;
 }
 
-void speedPID(){
-    
+//void speedPID(){
+//    
+//
+//    //printf("\r\n%d\t%d", valueleft, valueright);
+//    speed = valueleft;
+//    
+//    int pwm = Pspeed * (speed - 1000) + Dspeed * (speed - lastspeed);
+//    lastspeed = speed;
+//    setSpeed(pwm+lastpwm);
+//    lastpwm = pwm+lastpwm;
+//    char buf[20]={0};
+//    sprintf(buf, "p=%d ", pwm+lastpwm);
+//    LED_P8x16Str(80, 0, buf);
+//    sprintf(buf, "v=%d ", speed);
+//    LED_P8x16Str(80, 3, buf);
+//}
 
-    //printf("\r\n%d\t%d", valueleft, valueright);
-    speed = valueleft;
-    
-    int pwm = Pspeed * (speed - 1000) + Dspeed * (speed - lastspeed);
-    lastspeed = speed;
-    setSpeed(pwm+lastpwm);
-    lastpwm = pwm+lastpwm;
-    char buf[20]={0};
-    sprintf(buf, "p=%d ", pwm+lastpwm);
-    LED_P8x16Str(80, 0, buf);
-    sprintf(buf, "v=%d ", speed);
-    LED_P8x16Str(80, 3, buf);
-}
+//void findType2(){
+//    //判断直角
+//    int y;
+//    //int zhijiao = 0;
+//    int err = 0;
+//    for(y=HEIGHT;y>0;y--){
+//        int zhidao = 0.82*y+50;
+//        if(white[y] - zhidao > 10)err++;
+//        if(err>5)break;
+//    }
+//    while(y>0){
+//        y--;
+//        int zhidao = 0.82*y+50;
+//        if(white[y] - zhidao > 10){
+//            if(IMG[0][y] == 0)zhijiao--;
+//            if(IMG[WIDTH][y] == 0)zhijiao++;
+//            if(white[y] - zhidao > 50) break;
+//        }else break;
+//    }
+//    
+//    if(y>10)y-=5;
+//    if(white[y]>5 | white[y-1]>5 | white[y-2]>5)zhijiao=0;
+//    
+//    if((abs(zhijiao)>10) & (y > 25)){
+//        turn(zhijiao*2);
+//        setSpeed(1500);
+//        DelayMs(300);
+//    }
+//    
+//    char buf[20] = {0};
+//    sprintf(buf, "Z=%d ", zhijiao);
+//    LED_P8x16Str(80, 0, buf);
+//    sprintf(buf, "y=%d ", y);
+//    LED_P8x16Str(80, 1, buf);
+//}
+
+
+
 
 int main(void)
 {
+    ENABLE_SERVO = 1;
     ENABLE_DRIVE = 0;
     DelayInit();
     /* 打印串口及小灯 */
@@ -575,9 +652,9 @@ int main(void)
     LPTMR_PC_QuickInit(LPTMR_ALT2_PC05); /* 脉冲计数 */
     
     /* 开启PIT中断 */
-    PIT_QuickInit(HW_PIT_CH0, 1000*100);
-    PIT_CallbackInstall(HW_PIT_CH0, PIT_ISR);
-    PIT_ITDMAConfig(HW_PIT_CH0, kPIT_IT_TOF, true);
+    //PIT_QuickInit(HW_PIT_CH0, 1000*100);
+    //PIT_CallbackInstall(HW_PIT_CH0, PIT_ISR);
+    //PIT_ITDMAConfig(HW_PIT_CH0, kPIT_IT_TOF, true);
     
     //用户控制部分
     GPIO_QuickInit(HW_GPIOC, 8, kGPIO_Mode_IPU);

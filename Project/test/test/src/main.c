@@ -268,8 +268,9 @@ uint8_t IMG[OV7620_W][OV7620_H];   //使用内部RAM
 int white[HEIGHT];
 bool crossflag = false;
 bool rectflag = false;
-
+int rectcounter = 0;
 void fixLine(int black, int y, bool isblack){
+    if(isblack==0)rectcounter=40;
     //宽度大于5的黑条或白条
     if(white[y]>WIDTH-5)crossflag=true;else rectflag=false;
 
@@ -315,10 +316,26 @@ void fixLine(int black, int y, bool isblack){
         k2 = (float)(right2-right1)/(crossend-crossstart);
         //f(k1<0 && k2>0)break;
 
-        //两边补线
+        if(!isblack){
+//            for(int i=0;i<(crossstart-crossend) && crossend+i < HEIGHT-1;i++){
+//                //补线
+//                for(int j= ;j<right2+k2*i;j++)
+//                    IMG[j][crossend+i] = 0;
+//                }
+            for(int i=0;i<(crossstart-crossend) && crossend+i < HEIGHT-1;i++){
+                IMG[(int)(left2+k1*i)][crossend+i] = 0;
+                IMG[(int)(right2+k2*i)][crossend+i] = 0;
+                IMG[(int)(left2+k1*i)+1][crossend+i] = 0;
+                IMG[(int)(right2+k2*i)-1][crossend+i] = 0;
+                IMG[(int)(left2+k1*i)+2][crossend+i] = 0;
+                IMG[(int)(right2+k2*i)-2][crossend+i] = 0;
+            }
+        }
+        else 
         for(int i=0;i<(crossstart-crossend) && crossend+i < HEIGHT-1;i++){
-            IMG[(int)(left2+k1*i)][crossend+i] = isblack?2:0;
-            IMG[(int)(right2+k2*i)][crossend+i] = isblack?2:0;
+            //两边补线
+            IMG[(int)(left2+k1*i)][crossend+i] = 2;
+            IMG[(int)(right2+k2*i)][crossend+i] = 2;
         }
     }
 }
@@ -339,16 +356,17 @@ void findType(){
     
     for(y=HEIGHT;y>0;y--){
 
-        if(white[y]<3){
+        if(white[y]<5){
             //一条黑条
             if(lastblack)black++;   //上一次也是黑,则黑++
             else black=1;   //第一次黑
             lastblack=true;
         }else{
             lastblack=false;
-            if(black>3){    //黑大于5次
+            if((black > 7) && (black < 18) && (y > 60)){    //黑大于5次
                 rectflag=true;  //直角标志
                 fixLine(black, y, false);
+
             }else{
                 rectflag = false;
             }
@@ -357,14 +375,22 @@ void findType(){
 
         if(white[y]>WIDTH-3){
             //一条白
-            if(lastwhite)whitesum++;   //上一次也是黑,则黑++
-            else whitesum=1;   //第一次黑
+            if(lastwhite)whitesum++;
+            else whitesum=1;
             lastwhite=true;
         }else{
             lastwhite=true;
-            if(whitesum>5){
-                crossflag=true;
-                fixLine(whitesum, y, true);
+            if(whitesum>10){
+                
+                char buf[20]={0};
+                sprintf(buf, "s=%d", white[y+2]);
+                LED_P8x16Str(80, 1, buf);
+                
+                if(abs(white[y+2] - 0.82*y+50) < 10){
+                    //避免直角弯补线
+                    crossflag=true;
+                    fixLine(whitesum, y, true);
+                }
             }else{
                 crossflag = false;
             }
@@ -380,7 +406,7 @@ void findType2();
 void findCenter();
 
 #define DELTA_MAX 3
-int average;
+int average=0;
 int centers[HEIGHT] = {0};
 
 /* 接收完成一场后 用户处理函数 */
@@ -440,7 +466,6 @@ static void UserApp(uint32_t vcount)
 }
 
 int zhijiao = 0;
-
 int err2 = 0;
 void findCenter(){
     int y=HEIGHT;
@@ -452,17 +477,31 @@ void findCenter(){
     int left;
     int right;
     
+    if(rectcounter>0){
+        //检测到直角
+        rectcounter--;
+        PBout(11)=1;
+        //findType2();
+//        if(abs(average)>
+    }else PBout(11)=0;
+    
+    
     int err = 0;
-    int zhongxinnum2 = 0;
+    
+    while(white[y] - 0.82*y+50 > 50){
+            y--;
+    }
+    //跟直道差太大,丢弃
+    
+    left = WIDTH;
+    right = 0;
     
     while(y){
-        left = center-1;
-        right = center+1;
-        
         
         int zhongxin = 0;
         int zhongxinnum = 0;
-#define SCAN_WIDTH 15
+        
+#define SCAN_WIDTH 25
         int i=-SCAN_WIDTH;
         if(center+i<0)i=-center+1;
         for(;i<SCAN_WIDTH & (center+i < WIDTH);i++){
@@ -471,12 +510,10 @@ void findCenter(){
                 zhongxinnum ++;
             }
         }
-        if(zhongxinnum){
+        
+        if(zhongxinnum && (zhongxinnum < 20) ){
             center = zhongxin / zhongxinnum;
-            if(zhongxinnum2==0)
-                zhongxinnum2 = zhongxinnum;
         }else{
-            
             while(left){
                 if((IMG[left][y]==1)&&(IMG[left+1][y]==0))break;
                 left--;
@@ -489,36 +526,39 @@ void findCenter(){
             center = (left+right)/2;
         }
         
-        if(center>WIDTH)
-            break;
+
+        
         centers[y] = center;
         if((right-left<10) && (zhongxin == 0)){
-            err++;
             break;
         }
+        //赛道太窄而且不是中心引导线
+        //if(zhongxin && white[y]>20)break;
+        //中心线过宽(黑条)
         
-        if(err>12)break;
+        left = center-1;
+        right = center+1;
+        
         s += center;
         sum ++;
         
         //画出中心线
-        
         
         y--;
     }
     
     s=0;
     if(y<60)y=60;
-    int sum2 = 100-y;
-    for(;y<100;y++)s+=centers[y];
+    int sum2 = 80-y;
+    for(;y<80;y++)s+=centers[y];
     
     
     if(sum>10){
         for(y=HEIGHT;y>0;y--)IMG[centers[y]][y] = 1;
         average = s/sum2;
         average -= 80;
-        if(ENABLE_SERVO)turn(average/1.5);
-        if(ENABLE_DRIVE)setSpeed(1000+(sum-60)*25+(25-abs(average))*20);
+        if(ENABLE_SERVO)turn(average/1.3);
+        if(ENABLE_DRIVE)setSpeed(800+(sum-60)*10+(25-abs(average))*20);
         err2=0;
     }else{
         err2++;
@@ -532,8 +572,6 @@ void findCenter(){
     char buf[20]={0};
     sprintf(buf, "a=%d ", average);
     LED_P8x16Str(80, 0, buf);
-        sprintf(buf, "z=%d ", zhongxinnum2);
-    LED_P8x16Str(80, 1, buf);
     
 }
 
@@ -550,27 +588,27 @@ void setSpeed(int spd){
     }
 }
 
-int speed = 0;
-int lastspeed = 0;
-float Pspeed = -1;
-float Dspeed = 0.1;
-int lastpwm = 0;
-int valueright = 0;
-int valueleft = 0;
-void PIT_ISR(void)
-{
-     /* 记录正交脉冲个数 */
-    uint8_t dir; /* 记录编码器旋转方向1 */
-    
-    /* 获取正交解码数据 */
-    FTM_QD_GetData(HW_FTM2, &valueright, &dir);
-    valueleft = LPTMR_PC_ReadCounter();
-    FTM_QD_ClearCount(HW_FTM2); /* 如测量频率则需要定时清除Count值  */
-    LPTMR_ClearCounter();       //清空Counter
-    
-    if(valueright>32767)valueright=65535-valueright;
-    valueright*=4.2279;
-}
+//int speed = 0;
+//int lastspeed = 0;
+//float Pspeed = -1;
+//float Dspeed = 0.1;
+//int lastpwm = 0;
+//int valueright = 0;
+//int valueleft = 0;
+//void PIT_ISR(void)
+//{
+//     /* 记录正交脉冲个数 */
+//    uint8_t dir; /* 记录编码器旋转方向1 */
+//    
+//    /* 获取正交解码数据 */
+//    FTM_QD_GetData(HW_FTM2, &valueright, &dir);
+//    valueleft = LPTMR_PC_ReadCounter();
+//    FTM_QD_ClearCount(HW_FTM2); /* 如测量频率则需要定时清除Count值  */
+//    LPTMR_ClearCounter();       //清空Counter
+//    
+//    if(valueright>32767)valueright=65535-valueright;
+//    valueright*=4.2279;
+//}
 
 //void speedPID(){
 //    
@@ -589,52 +627,50 @@ void PIT_ISR(void)
 //    LED_P8x16Str(80, 3, buf);
 //}
 
-//void findType2(){
-//    //判断直角
-//    int y;
-//    //int zhijiao = 0;
-//    int err = 0;
-//    for(y=HEIGHT;y>0;y--){
-//        int zhidao = 0.82*y+50;
-//        if(white[y] - zhidao > 10)err++;
-//        if(err>5)break;
-//    }
-//    while(y>0){
-//        y--;
-//        int zhidao = 0.82*y+50;
-//        if(white[y] - zhidao > 10){
-//            if(IMG[0][y] == 0)zhijiao--;
-//            if(IMG[WIDTH][y] == 0)zhijiao++;
-//            if(white[y] - zhidao > 50) break;
-//        }else break;
-//    }
-//    
-//    if(y>10)y-=5;
-//    if(white[y]>5 | white[y-1]>5 | white[y-2]>5)zhijiao=0;
-//    
-//    if((abs(zhijiao)>10) & (y > 25)){
-//        turn(zhijiao*2);
-//        setSpeed(1500);
-//        DelayMs(300);
-//    }
-//    
+void findType2(){
+    //判断直角
+    int y;
+    int zhijiao = 0;
+    int err = 0;
+    y=HEIGHT;
+    while( (abs(white[y] - 0.82*y+50) < 10) & (y > 0) ){
+        y--;
+    }
+    while(y>0){
+        y--;
+        int zhidao = 0.82*y+50;
+        if(white[y] - zhidao > 10){
+            if(IMG[0][y] == 0)zhijiao--;
+            if(IMG[WIDTH][y] == 0)zhijiao++;
+            if(white[y] - zhidao > 50) break;
+        }else break;
+    }
+    
+    if(y>10)y-=5;
+    if(white[y]>5 | white[y-1]>5 | white[y-2]>5)zhijiao=0;
+    
+    if((abs(zhijiao)>10) & (y > 25)){
+        if(zhijiao>0)average=-40;
+        turn(average/1.2);
+        setSpeed(1500);
+        DelayMs(300);
+    }
+    
 //    char buf[20] = {0};
 //    sprintf(buf, "Z=%d ", zhijiao);
 //    LED_P8x16Str(80, 0, buf);
 //    sprintf(buf, "y=%d ", y);
 //    LED_P8x16Str(80, 1, buf);
-//}
-
-
+}
 
 
 int main(void)
 {
-    ENABLE_SERVO = 1;
-    ENABLE_DRIVE = 0;
+
     DelayInit();
     /* 打印串口及小灯 */
     
+    GPIO_QuickInit(HW_GPIOB, 11, kGPIO_Mode_OPP);       //蜂鸣器
     GPIO_QuickInit(HW_GPIOD, 10, kGPIO_Mode_OPP);
     UART_QuickInit(UART0_RX_PB16_TX_PB17, 115200);
     /* 注册中断回调函数 */
@@ -648,8 +684,8 @@ int main(void)
     initCamera();
     
     //编码器初始化
-    FTM_QD_QuickInit(FTM2_QD_PHA_PA10_PHB_PA11, kFTM_QD_NormalPolarity, kQD_PHABEncoding);
-    LPTMR_PC_QuickInit(LPTMR_ALT2_PC05); /* 脉冲计数 */
+    //FTM_QD_QuickInit(FTM2_QD_PHA_PA10_PHB_PA11, kFTM_QD_NormalPolarity, kQD_PHABEncoding);
+    //LPTMR_PC_QuickInit(LPTMR_ALT2_PC05); /* 脉冲计数 */
     
     /* 开启PIT中断 */
     //PIT_QuickInit(HW_PIT_CH0, 1000*100);
@@ -673,7 +709,7 @@ int main(void)
 //            DelayMs(100);
 //        }
         
-        //setRightSpeed(3000);
+        //setRightSpeed(3000); 
         //turn(-20);
         
     }
@@ -691,24 +727,36 @@ int main(void)
     int test = 0;
     int last = 0;
     
-    WDOG_QuickInit(1000);
+    ENABLE_SERVO = 1;
+    ENABLE_DRIVE = 0;
     
     while(1)
     {
-        DelayMs(100);
-        WDOG_Refresh();
-        //speedPID();
+        DelayUs(500);
         
-//        if(PBin(3)){
-//            if(test>0)test--;
-//        }
-//        else {
-//            test = 50;
-//        }
-//        PDout(10) = test>0;
-//        if((test>0)!=last){
-//            printf("change,%d\r\n", test>0);
-//            last = test>0;
-//        }
+        if(PBin(3)){
+            if(test>0)test--;
+        }
+        else {
+            test = 50;
+        }
+        
+        PDout(10) = test>0;
+        
+        if((test>0)!=last){
+            last = test>0;
+            if(last){
+                ENABLE_SERVO = 0;
+                ENABLE_DRIVE = 0;
+                setSpeed(0);
+                turn(0);
+                DelayMs(1000);
+            }else{
+                ENABLE_SERVO = 1;
+                ENABLE_DRIVE = 1;
+                DelayMs(1000);
+            }
+        }
+        
     }
 }

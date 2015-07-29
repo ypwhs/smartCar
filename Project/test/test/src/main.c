@@ -548,7 +548,7 @@ void findCenter(){
     }
     
     s=0;
-    if(y<60)y=60;
+    if(y<70)y=70;
     int sum2 = 80-y;
     for(;y<80;y++)s+=centers[y];
     
@@ -557,8 +557,8 @@ void findCenter(){
         for(y=HEIGHT;y>0;y--)IMG[centers[y]][y] = 1;
         average = s/sum2;
         average -= 80;
-        if(ENABLE_SERVO)turn(average/1.3);
-        if(ENABLE_DRIVE)setSpeed(800+(sum-60)*10+(25-abs(average))*20);
+        if(ENABLE_SERVO)turn(average/1.5);
+        if(ENABLE_DRIVE)setSpeed(800+(sum-60)*20+(25-abs(average))*20-(rectcounter>0)*900);
         err2=0;
     }else{
         err2++;
@@ -728,35 +728,35 @@ int main(void)
     int last = 0;
     
     ENABLE_SERVO = 1;
-    ENABLE_DRIVE = 0;
+    ENABLE_DRIVE = 1;
     
     while(1)
     {
         DelayUs(500);
-        
-        if(PBin(3)){
-            if(test>0)test--;
-        }
-        else {
-            test = 50;
-        }
-        
-        PDout(10) = test>0;
-        
-        if((test>0)!=last){
-            last = test>0;
-            if(last){
-                ENABLE_SERVO = 0;
-                ENABLE_DRIVE = 0;
-                setSpeed(0);
-                turn(0);
-                DelayMs(1000);
-            }else{
-                ENABLE_SERVO = 1;
-                ENABLE_DRIVE = 1;
-                DelayMs(1000);
-            }
-        }
+//        
+//        if(PBin(3)){
+//            if(test>0)test--;
+//        }
+//        else {
+//            test = 50;
+//        }
+//        
+//        PDout(10) = test>0;
+//        
+//        if((test>0)!=last){
+//            last = test>0;
+//            if(last){
+//                ENABLE_SERVO = 0;
+//                ENABLE_DRIVE = 0;
+//                setSpeed(0);
+//                turn(0);
+//                DelayMs(1000);
+//            }else{
+//                ENABLE_SERVO = 1;
+//                ENABLE_DRIVE = 1;
+//                DelayMs(1000);
+//            }
+//        }
         
     }
 }

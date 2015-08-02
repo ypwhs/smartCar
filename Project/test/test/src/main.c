@@ -269,8 +269,12 @@ int white[HEIGHT];
 bool crossflag = false;
 bool rectflag = false;
 int rectcounter = 0;
+int crosscounter = 0;
 void fixLine(int black, int y, bool isblack){
-    if(isblack==0)rectcounter=40;
+    if(isblack==0)
+        rectcounter=60;
+    else
+        crosscounter=40;
     //宽度大于5的黑条或白条
     if(white[y]>WIDTH-5)crossflag=true;else rectflag=false;
 
@@ -465,8 +469,17 @@ static void UserApp(uint32_t vcount)
     
 }
 
+int rectDir = 1;
+
 int zhijiao = 0;
 int err2 = 0;
+int rectNum = 0;
+int lastRect = 0;
+
+int AVERAGE_OFFSET = 80;
+
+float differ = 0;
+
 void findCenter(){
     int y=HEIGHT;
 
@@ -485,12 +498,22 @@ void findCenter(){
 //        if(abs(average)>
     }else PBout(11)=0;
     
+    if(crosscounter>0){
+        crosscounter--;
+    }
+    
+    if(lastRect != (rectcounter>0) ){
+        if(rectcounter>0)rectNum ++;
+        lastRect = (rectcounter>0);
+    }
+    
     
     int err = 0;
     
     while(white[y] - 0.82*y+50 > 50){
             y--;
     }
+    
     //跟直道差太大,丢弃
     
     left = WIDTH;
@@ -547,18 +570,62 @@ void findCenter(){
         y--;
     }
     
-    s=0;
-    if(y<70)y=70;
-    int sum2 = 80-y;
-    for(;y<80;y++)s+=centers[y];
+
     
+    
+    s=0;
+    if(y<65)y=65;
+    int sum2 = 85-y;
+    for(;y<85;y++)s+=centers[y];
+    
+    int sum3 = 0;
     
     if(sum>10){
         for(y=HEIGHT;y>0;y--)IMG[centers[y]][y] = 1;
         average = s/sum2;
-        average -= 80;
-        if(ENABLE_SERVO)turn(average/1.5);
-        if(ENABLE_DRIVE)setSpeed(800+(sum-60)*20+(25-abs(average))*20-(rectcounter>0)*900);
+        
+        for(y=0;y<HEIGHT;y++){
+            if( abs(centers[y]-average)<5)sum3++;
+        }
+        
+        average -= AVERAGE_OFFSET;
+        
+
+        
+        if(ENABLE_SERVO){
+//            
+//            if( (rectcounter<20) & (rectcounter>5) & (rectNum %2 == 1)){
+//                //如果快到直角
+//                if(rectDir){
+//                    average = 45;
+//                }
+//                else {
+//                    average = -45;
+//                }
+//            }else
+//            {
+//                AVERAGE_OFFSET = 80;
+//            }
+            if(rectcounter)
+                
+                if((white[80]>100) & (white[80]<130))       //白色变多说明可能是直角弯
+                    if(centers[80] < 70){
+                        average = -40;
+                    }else if(centers[80] > 90){
+                        average = 40;
+                    }
+            if(average>22){
+                average = average*average/22;
+            }
+            turn(average/1.3);
+            
+        }
+        //-(rectcounter>0)*800
+        
+        int zhidaojiacheng = (sum3-20)*5;
+        int banjingjiacheng = (40-abs(average))*20;
+        if(banjingjiacheng>400)banjingjiacheng=400;
+        if(ENABLE_DRIVE)setSpeed(differ+1800+zhidaojiacheng+banjingjiacheng-(rectcounter>0)*700-(crosscounter>0)*400);
         err2=0;
     }else{
         err2++;
@@ -572,10 +639,11 @@ void findCenter(){
     char buf[20]={0};
     sprintf(buf, "a=%d ", average);
     LED_P8x16Str(80, 0, buf);
-    
+    sprintf(buf, "h=%d ", sum3);
+    LED_P8x16Str(80, 1, buf);
 }
 
-float differ = 0;
+
 
 void setSpeed(int spd){
 #define kchasu 60
@@ -699,21 +767,12 @@ int main(void)
     GPIO_QuickInit(HW_GPIOC, 14, kGPIO_Mode_IPU);
     GPIO_QuickInit(HW_GPIOC, 16, kGPIO_Mode_IPU);
     GPIO_QuickInit(HW_GPIOC, 18, kGPIO_Mode_IPU);
-#define differadd 0.02
-    if(PCin(8)){
-        differ += differadd;
-//        for(int i=0;i<5000;i+=100){
-//            setSpeed(i);
-//            DelayMs(500);
-//            printf("\t%d", i);
-//            DelayMs(100);
-//        }
-        
-        //setRightSpeed(3000); 
-        //turn(-20);
-        
-    }
-    if(PCin(10))differ += differadd;
+#define differadd 100
+//    if(PCin(8)){
+//        differ += differadd;
+//    }
+    //rectDir = PCin(8);
+    //if(PCin(10))differ += differadd;
     if(PCin(12))differ += differadd;
     if(PCin(14))differ += differadd;
     if(PCin(16))differ += differadd;
@@ -733,30 +792,30 @@ int main(void)
     while(1)
     {
         DelayUs(500);
-//        
-//        if(PBin(3)){
-//            if(test>0)test--;
-//        }
-//        else {
-//            test = 50;
-//        }
-//        
-//        PDout(10) = test>0;
-//        
-//        if((test>0)!=last){
-//            last = test>0;
-//            if(last){
-//                ENABLE_SERVO = 0;
-//                ENABLE_DRIVE = 0;
-//                setSpeed(0);
-//                turn(0);
-//                DelayMs(1000);
-//            }else{
-//                ENABLE_SERVO = 1;
-//                ENABLE_DRIVE = 1;
-//                DelayMs(1000);
-//            }
-//        }
+        
+        if(PBin(3)){
+            if(test>0)test--;
+        }
+        else {
+            test = 5;
+        }
+        
+        PDout(10) = test>0;
+        
+        if((test>0)!=last){
+            last = test>0;
+            if(last){
+                ENABLE_SERVO = 0;
+                ENABLE_DRIVE = 0;
+                setSpeed(0);
+                turn(0);
+                DelayMs(1000);
+            }else{
+                ENABLE_SERVO = 1;
+                ENABLE_DRIVE = 1;
+                DelayMs(1000);
+            }
+        }
         
     }
 }

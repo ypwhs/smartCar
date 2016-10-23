@@ -1,19 +1,23 @@
+# smartCar
 
-#smartCar
-=========
+![](https://raw.githubusercontent.com/ypwhs/resources/master/3.gif)
 
-##第一次使用摄像头
+![](https://raw.githubusercontent.com/ypwhs/resources/master/4.gif)
 
-![](screen/img1.jpg)
+## first use camera
 
-##第一次识别赛道
+<img width=50% src=screen/img1.jpg>
 
-![](screen/img2.jpg)
+## first recognize line
 
-##摄像头
+<img width=50% src=screen/img2.jpg>
 
-![](screen/IMG_20150716_211534.jpg)
+## camera
 
-##车上的板子
+<img width=50% src=screen/IMG_20150716_211534.jpg>
 
-![](screen/56F9B75D7D16DC1A01F5C31D98BCE33C.jpg)
+## board
+
+<img width=50% src=screen/56F9B75D7D16DC1A01F5C31D98BCE33C.jpg>
+
+[PCB_smartCar](https://github.com/ypwhs/PCB_smartCar)
